@@ -1,41 +1,34 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { Logo } from '@/components/ui/Logo';
 import { NavBar } from '@/components/navigation/NavBar';
 import { ToolCard } from '@/components/dashboard/ToolCard';
 import { ResourceCard } from '@/components/dashboard/ResourceCard';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { useTheme } from '@/app/theme-selector';
 import { useRouter } from 'next/navigation';
+import { Header } from '@/components/navigation/Header';
 
 export default function Dashboard() {
-  const { theme, colors, toggleColorMode, colorMode } = useTheme();
+  const { theme } = useTheme();
   const { data: session } = useSession();
   const [greeting, setGreeting] = useState<string>('');
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const mainRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [userSchedule, setUserSchedule] = useState<any[]>([]);
   const [todayClasses, setTodayClasses] = useState<any[]>([]);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
   
-  // Get user's name or default to "there"
-  const userName = session?.user?.name || 'there';
-  // Get first letter of name for avatar
-  const userInitial = userName !== 'there' ? userName.charAt(0) : 'U';
-  
-  // Set up scroll progress tracking
+  // Set up scroll progress tracking for the scrollable content
   useEffect(() => {
     const handleScroll = () => {
       if (mainRef.current) {
         const scrollPos = mainRef.current.scrollTop;
         const maxScroll = mainRef.current.scrollHeight - mainRef.current.clientHeight;
-        setScrollProgress(scrollPos / (maxScroll || 1));
+        // We're not using scrollProgress anymore since the Header component has its own
       }
     };
     
@@ -162,13 +155,6 @@ export default function Dashboard() {
     }
   };
   
-  // Mock notifications
-  const notifications = [
-    { id: 1, title: 'Study reminder', message: 'It\'s time for your daily algorithms practice', time: '5 min ago', unread: true },
-    { id: 2, title: 'New resource', message: 'CS50 uploaded new lecture notes', time: '2 hours ago', unread: true },
-    { id: 3, title: 'Quiz results', message: 'You scored 92% on Data Structures quiz', time: 'Yesterday', unread: false },
-  ];
-  
   // Mock data for recently viewed resources
   const recentResources = [
     {
@@ -260,117 +246,8 @@ export default function Dashboard() {
         </div>
       </div>
       
-      {/* Header - Fixed & Compact */}
-      <motion.header 
-        className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-white/5"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="flex justify-between items-center h-16 px-4 md:px-6">
-          {/* Logo & Title */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Logo size={32} />
-              <div className="absolute -inset-1 bg-primary/20 rounded-full blur-sm -z-10" />
-            </div>
-            <h1 className="text-xl font-bold hidden md:block text-gradient">Study Buddy</h1>
-          </div>
-          
-          {/* Progress Indicator */}
-          <div className="absolute bottom-0 left-0 w-full h-0.5 bg-white/5">
-            <motion.div 
-              className="h-full bg-gradient-to-r from-primary to-secondary"
-              style={{ scaleX: scrollProgress, transformOrigin: 'left' }} 
-            />
-          </div>
-          
-          {/* Controls */}
-          <div className="flex items-center gap-2">
-            {/* Theme Toggle */}
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleColorMode}
-              className="w-8 h-8 rounded-full flex items-center justify-center bg-bg-card backdrop-blur-md border border-white/10 shadow-sm"
-            >
-              {colorMode === 'dark' ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 17C14.7614 17 17 14.7614 17 12C17 9.23858 14.7614 7 12 7C9.23858 7 7 9.23858 7 12C7 14.7614 9.23858 17 12 17Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M12 1V3M12 21V23M4.22 4.22L5.64 5.64M18.36 18.36L19.78 19.78M1 12H3M21 12H23M4.22 19.78L5.64 18.36M18.36 5.64L19.78 4.22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )}
-            </motion.button>
-            
-            {/* Notifications */}
-            <div className="relative">
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-bg-card backdrop-blur-md border border-white/10 shadow-sm"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22ZM18 16V11C18 7.93 16.37 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.64 5.36 6 7.92 6 11V16L4 18V19H20V18L18 16ZM16 17H8V11C8 8.52 9.51 6.5 12 6.5C14.49 6.5 16 8.52 16 11V17Z" fill="currentColor"/>
-                </svg>
-                {notifications.filter(n => n.unread).length > 0 && (
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
-                )}
-              </motion.button>
-              
-              {/* Notifications Panel */}
-              <AnimatePresence>
-                {showNotifications && (
-                  <motion.div 
-                    className="absolute right-0 mt-2 w-72 bg-bg-card backdrop-blur-xl border border-white/10 rounded-xl shadow-lg overflow-hidden z-50"
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="p-3 border-b border-white/5 flex justify-between items-center">
-                      <h4 className="text-sm font-medium">Notifications</h4>
-                      <button className="text-xs text-primary">Mark all read</button>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto custom-scrollbar">
-                      {notifications.map(notification => (
-                        <motion.div 
-                          key={notification.id} 
-                          className={`p-3 border-b border-white/5 hover:bg-white/5 transition-colors ${notification.unread ? 'bg-primary/5' : ''}`}
-                          whileHover={{ x: 3 }}
-                        >
-                          <div className="flex justify-between">
-                            <h5 className="text-sm font-medium">{notification.title}</h5>
-                            <span className="text-xs text-text-secondary">{notification.time}</span>
-                          </div>
-                          <p className="text-xs text-text-secondary mt-1">{notification.message}</p>
-                        </motion.div>
-                      ))}
-                    </div>
-                    <div className="p-2 text-center">
-                      <button className="text-xs text-primary">View all</button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            
-            {/* Profile */}
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center bg-gradient-to-r from-primary to-secondary rounded-full h-8 pr-2 pl-0.5 shadow-glow"
-            >
-              <span className="w-7 h-7 rounded-full bg-white text-primary font-medium text-xs flex items-center justify-center">{userInitial}</span>
-              <span className="text-white text-xs font-medium ml-1 hidden md:block">{userName !== 'there' ? userName : 'User'}</span>
-            </motion.button>
-          </div>
-        </div>
-      </motion.header>
+      {/* Common Header Component */}
+      <Header />
       
       {/* Main Scrollable Content */}
       <main 
@@ -387,7 +264,7 @@ export default function Dashboard() {
           <div className="glass-card py-6 px-5 relative overflow-hidden">
             <div className="relative z-10">
               <h2 className="text-2xl md:text-3xl font-bold mb-2">
-                {greeting}, <span className="text-gradient">{userName}</span>
+                {greeting}, <span className="text-gradient">{session?.user?.name || 'there'}</span>
               </h2>
               <p className="text-text-secondary text-sm md:text-base max-w-md">
                 {isLoadingSchedule ? (

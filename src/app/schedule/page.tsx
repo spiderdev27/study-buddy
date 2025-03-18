@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Header } from '@/components/navigation/Header';
 
 interface ClassSchedule {
   day: string;
@@ -179,6 +180,7 @@ export default function SchedulePage() {
 
   return (
     <div className="min-h-screen bg-background text-text-primary">
+      <Header />
       <div className="container mx-auto px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: 10 }}

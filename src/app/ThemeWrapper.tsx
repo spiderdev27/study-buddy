@@ -1,13 +1,13 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { ThemeProvider, ThemeSelector } from './theme-selector';
+import { ThemeProvider } from './theme-selector';
 import { ThemeDebug } from '@/components/ThemeDebug';
 
 export function ThemeWrapper({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
-      <ThemeSelector />
+      {/* Theme selector is now integrated into the Header component */}
       <ThemeDebug />
       {children}
     </ThemeProvider>

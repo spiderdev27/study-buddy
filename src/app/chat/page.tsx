@@ -9,6 +9,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { NavBar } from '@/components/navigation/NavBar';
+import { Header } from '@/components/navigation/Header';
 import { Logo } from '@/components/ui/Logo';
 import { useTheme } from '@/app/theme-selector';
 
@@ -179,35 +180,7 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-white/10">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center">
-            <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className="mr-4 p-2 rounded-full hover:bg-white/5 transition-colors"
-              aria-label="Toggle sidebar"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-text-primary" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-              </svg>
-            </button>
-            <Logo size={28} className="mr-3" />
-            <h1 className="text-xl font-bold text-text-primary">AI Chat Assistant</h1>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Link
-              href="/dashboard"
-              className="p-2 rounded-full hover:bg-white/5 transition-colors"
-              aria-label="Go to dashboard"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-text-primary" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-              </svg>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Header />
       
       <div className="flex flex-1 overflow-hidden relative">
         {/* Chat History Sidebar */}

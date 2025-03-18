@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { NavBar } from '@/components/navigation/NavBar';
+import { Header } from '@/components/navigation/Header';
 import { useTheme } from '@/app/theme-selector';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -362,36 +363,10 @@ export default function QuizGenerator() {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-bg-primary to-bg-secondary">
-      {/* Header with navigation */}
-      <div className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-white/10">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Quiz Generator
-            </h1>
-          </div>
-          <div className="flex items-center space-x-3">
-            {quiz.length > 0 && (
-              <button
-                onClick={handleReset}
-                className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg transition-colors flex items-center group relative"
-                title="Start a new quiz"
-                aria-label="Start a new quiz"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1.5">
-                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                New Quiz
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-white/10 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  Start a new quiz with a different topic
-                </div>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      {/* Common header */}
+      <Header />
+      
+      <div className="container mx-auto px-4 py-6">
         {!quiz.length ? (
           // Quiz Generator Form
           <motion.div
@@ -931,7 +906,7 @@ export default function QuizGenerator() {
             </div>
           </motion.div>
         )}
-      </main>
+      </div>
       
       {/* Footer Navigation */}
       <NavBar />

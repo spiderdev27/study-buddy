@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { Logo } from '@/components/ui/Logo';
 import { NavBar } from '@/components/navigation/NavBar';
+import { Header } from '@/components/navigation/Header';
 import { useTheme } from '@/app/theme-selector';
 
 export default function SummarizeTool() {
@@ -108,24 +109,8 @@ export default function SummarizeTool() {
         </div>
       </div>
       
-      {/* Header - Fixed & Compact */}
-      <motion.header 
-        className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-white/5"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="flex justify-between items-center h-16 px-4 md:px-6">
-          {/* Logo & Title */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Logo size={32} />
-              <div className="absolute -inset-1 bg-primary/20 rounded-full blur-sm -z-10" />
-            </div>
-            <h1 className="text-xl font-bold hidden md:block text-gradient">Study Buddy</h1>
-          </div>
-        </div>
-      </motion.header>
+      {/* Common Header Component */}
+      <Header />
       
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto pb-24 relative z-10">

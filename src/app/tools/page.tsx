@@ -7,6 +7,7 @@ import { NavBar } from '@/components/navigation/NavBar';
 import { Logo } from '@/components/ui/Logo';
 import { useTheme } from '@/app/theme-selector';
 import { useSession } from 'next-auth/react';
+import { Header } from '@/components/navigation/Header';
 
 export default function Tools() {
   const { theme, colors, toggleColorMode, colorMode } = useTheme();
@@ -169,76 +170,8 @@ export default function Tools() {
         </div>
       </div>
       
-      {/* Header - Fixed & Compact */}
-      <motion.header 
-        className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-white/5"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="flex justify-between items-center h-16 px-4 md:px-6">
-          {/* Logo & Title */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Logo size={32} />
-              <div className="absolute -inset-1 bg-primary/20 rounded-full blur-sm -z-10" />
-            </div>
-            <h1 className="text-xl font-bold hidden md:block text-gradient">Study Buddy</h1>
-          </div>
-          
-          {/* Progress Indicator */}
-          <div className="absolute bottom-0 left-0 w-full h-0.5 bg-white/5">
-            <motion.div 
-              className="h-full bg-gradient-to-r from-primary to-secondary"
-              style={{ scaleX: scrollProgress, transformOrigin: 'left' }} 
-            />
-          </div>
-          
-          {/* Controls */}
-          <div className="flex items-center gap-2">
-            {/* Theme Toggle */}
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleColorMode}
-              className="w-8 h-8 rounded-full flex items-center justify-center bg-bg-card backdrop-blur-md border border-white/10 shadow-sm"
-            >
-              {colorMode === 'dark' ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 17C14.7614 17 17 14.7614 17 12C17 9.23858 14.7614 7 12 7C9.23858 7 7 9.23858 7 12C7 14.7614 9.23858 17 12 17Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M12 1V3M12 21V23M4.22 4.22L5.64 5.64M18.36 18.36L19.78 19.78M1 12H3M21 12H23M4.22 19.78L5.64 18.36M18.36 5.64L19.78 4.22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )}
-            </motion.button>
-            
-            {/* Search Button */}
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-8 h-8 rounded-full flex items-center justify-center bg-bg-card backdrop-blur-md border border-white/10 shadow-sm"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="11" cy="11" r="8" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </motion.button>
-            
-            {/* Profile */}
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center bg-gradient-to-r from-primary to-secondary rounded-full h-8 pr-2 pl-0.5 shadow-glow"
-            >
-              <span className="w-7 h-7 rounded-full bg-white text-primary font-medium text-xs flex items-center justify-center">A</span>
-              <span className="text-white text-xs font-medium ml-1 hidden md:block">Alex</span>
-            </motion.button>
-          </div>
-        </div>
-      </motion.header>
+      {/* Common Header Component */}
+      <Header />
       
       {/* Main Scrollable Content */}
       <main 

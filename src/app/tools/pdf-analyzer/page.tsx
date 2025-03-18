@@ -12,6 +12,7 @@ import rehypeRaw from 'rehype-raw';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import 'highlight.js/styles/github-dark.css';
+import { Header } from '@/components/navigation/Header';
 
 export default function PDFAnalyzer() {
   const { theme, colors } = useTheme();
@@ -538,14 +539,15 @@ export default function PDFAnalyzer() {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-bg-primary to-bg-secondary">
-      {/* Header with navigation */}
-      <div className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-white/10">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              PDF Analyzer
-            </h1>
-          </div>
+      {/* Common Header */}
+      <Header />
+      
+      {/* PDF-specific controls */}
+      <div className="container mx-auto px-4 py-2">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            PDF Analyzer
+          </h2>
           <div className="flex items-center space-x-3">
             {pdfFile && (
               <button
@@ -588,6 +590,22 @@ export default function PDFAnalyzer() {
                 {directToGemini ? 
                   "Sends PDF directly to Gemini for analysis" : 
                   "Extracts text before analysis"}
+              </div>
+            </button>
+            <button
+              onClick={toggleViewerMode}
+              className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg transition-colors flex items-center group relative"
+              title={useFallbackViewer ? "Using browser's built-in PDF viewer" : "Using PDF.js renderer"}
+              aria-label={useFallbackViewer ? "Switch to PDF.js viewer" : "Switch to browser viewer"}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1.5">
+                <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {useFallbackViewer ? "Browser View" : "PDF.js View"}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-white/10 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                {useFallbackViewer ? 
+                  "Using browser's built-in PDF viewer" : 
+                  "Using PDF.js renderer"}
               </div>
             </button>
           </div>
@@ -696,15 +714,6 @@ export default function PDFAnalyzer() {
                 </div>
               </div>
               <div className="flex items-center space-x-3 mt-2 sm:mt-0">
-                <button 
-                  onClick={toggleViewerMode} 
-                  className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/10 rounded-lg flex items-center"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1.5">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-                  </svg>
-                  {useFallbackViewer ? 'Browser View' : 'PDF.js View'}
-                </button>
                 <div className="hidden md:flex items-center text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-full">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1">
                     <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" />
