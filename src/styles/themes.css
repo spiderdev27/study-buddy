@@ -1,0 +1,132 @@
+:root {
+  /* Default theme colors - Dark Mode */
+  --color-primary: #4F46E5 !important;
+  --color-primary-rgb: 79, 70, 229 !important;
+  --color-secondary: #9333EA !important;
+  --color-secondary-rgb: 147, 51, 234 !important;
+  --color-accent: #10B981 !important;
+  --color-accent-rgb: 16, 185, 129 !important;
+  --color-background: #0F172A !important;
+  --color-card-bg: rgba(30, 41, 59, 0.7) !important;
+  --color-text-primary: #FFFFFF !important;
+  --color-text-secondary: #CBD5E1 !important;
+}
+
+/* Light mode overrides */
+.mode-light {
+  --color-background: #F8FAFC !important;
+  --color-card-bg: rgba(255, 255, 255, 0.8) !important;
+  --color-text-primary: #0F172A !important;
+  --color-text-secondary: #475569 !important;
+}
+
+/* Default theme with explicit colors for both modes */
+.theme-default.mode-dark {
+  --color-primary: #4F46E5 !important;
+  --color-primary-rgb: 79, 70, 229 !important;
+  --color-secondary: #9333EA !important;
+  --color-secondary-rgb: 147, 51, 234 !important;
+  --color-accent: #10B981 !important;
+  --color-accent-rgb: 16, 185, 129 !important;
+  --color-background: #0F172A !important;
+  --color-card-bg: rgba(30, 41, 59, 0.7) !important;
+  --color-text-primary: #FFFFFF !important;
+  --color-text-secondary: #CBD5E1 !important;
+}
+
+.theme-default.mode-light {
+  --color-primary: #4F46E5 !important;
+  --color-primary-rgb: 79, 70, 229 !important;
+  --color-secondary: #9333EA !important;
+  --color-secondary-rgb: 147, 51, 234 !important;
+  --color-accent: #10B981 !important;
+  --color-accent-rgb: 16, 185, 129 !important;
+  --color-background: #F8FAFC !important;
+  --color-card-bg: rgba(255, 255, 255, 0.8) !important;
+  --color-text-primary: #0F172A !important;
+  --color-text-secondary: #475569 !important;
+}
+
+/* Dark Academia Theme - Dark Mode */
+.theme-dark-academia.mode-dark {
+  --color-primary: #8B5D33 !important;
+  --color-primary-rgb: 139, 93, 51 !important;
+  --color-secondary: #5F452F !important;
+  --color-secondary-rgb: 95, 69, 47 !important;
+  --color-accent: #D4B483 !important;
+  --color-accent-rgb: 212, 180, 131 !important;
+  --color-background: #1C1410 !important;
+  --color-card-bg: rgba(44, 33, 28, 0.7) !important;
+  --color-text-primary: #F9F7F5 !important;
+  --color-text-secondary: #E6DED1 !important;
+}
+
+/* Dark Academia Theme - Light Mode */
+.theme-dark-academia.mode-light {
+  --color-primary: #6D573D !important;
+  --color-primary-rgb: 109, 87, 61 !important;
+  --color-secondary: #4B382A !important;
+  --color-secondary-rgb: 75, 56, 42 !important;
+  --color-accent: #B09978 !important;
+  --color-accent-rgb: 176, 153, 120 !important;
+  --color-background: #F5F2ED !important;
+  --color-card-bg: rgba(230, 222, 209, 0.8) !important;
+  --color-text-primary: #1C1713 !important;
+  --color-text-secondary: #594A3A !important;
+}
+
+/* Nature Theme - Dark Mode */
+.theme-nature.mode-dark {
+  --color-primary: #3E7C17 !important;
+  --color-primary-rgb: 62, 124, 23 !important;
+  --color-secondary: #125C13 !important;
+  --color-secondary-rgb: 18, 92, 19 !important;
+  --color-accent: #F8CB2E !important;
+  --color-accent-rgb: 248, 203, 46 !important;
+  --color-background: #081C15 !important;
+  --color-card-bg: rgba(14, 64, 39, 0.7) !important;
+  --color-text-primary: #FFFFFF !important;
+  --color-text-secondary: #D7F9D0 !important;
+}
+
+/* Nature Theme - Light Mode */
+.theme-nature.mode-light {
+  --color-primary: #2A6A10 !important;
+  --color-primary-rgb: 42, 106, 16 !important;
+  --color-secondary: #125C13 !important;
+  --color-secondary-rgb: 18, 92, 19 !important;
+  --color-accent: #E8B60F !important;
+  --color-accent-rgb: 232, 182, 15 !important;
+  --color-background: #F0F7F0 !important;
+  --color-card-bg: rgba(240, 247, 240, 0.8) !important;
+  --color-text-primary: #081C15 !important;
+  --color-text-secondary: #2E542A !important;
+}
+
+/* Minimalist Theme - Dark Mode */
+.theme-minimalist.mode-dark {
+  --color-primary: #383838 !important;
+  --color-primary-rgb: 56, 56, 56 !important;
+  --color-secondary: #777777 !important;
+  --color-secondary-rgb: 119, 119, 119 !important;
+  --color-accent: #F2F2F2 !important;
+  --color-accent-rgb: 242, 242, 242 !important;
+  --color-background: #0A0A0A !important;
+  --color-card-bg: rgba(20, 20, 20, 0.7) !important;
+  --color-text-primary: #FFFFFF !important;
+  --color-text-secondary: #CCCCCC !important;
+}
+
+/* Minimalist Theme - Light Mode */
+.theme-minimalist.mode-light {
+  --color-primary: #383838 !important;
+  --color-primary-rgb: 56, 56, 56 !important;
+  --color-secondary: #777777 !important;
+  --color-secondary-rgb: 119, 119, 119 !important;
+  --color-accent: #A0A0A0 !important;
+  --color-accent-rgb: 160, 160, 160 !important;
+  --color-background: #F8F8F8 !important;
+  --color-card-bg: rgba(248, 248, 248, 0.8) !important;
+  --color-text-primary: #0A0A0A !important;
+  --color-text-secondary: #555555 !important;
+} 

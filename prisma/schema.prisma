@@ -1,0 +1,171 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // User preferences
+  theme         String    @default("default")
+  colorMode     String    @default("light")
+  
+  // Study statistics
+  totalStudyHours Float    @default(0)
+  longestStreak   Int      @default(0)
+  currentStreak   Int      @default(0)
+  
+  // Relationships
+  resources     Resource[]
+  notes         Note[]
+  flashcards    Flashcard[]
+  studySessions StudySession[]
+  chatSessions  ChatSession[]
+  accounts      Account[]
+  sessions      Session[]
+  schedule      Json?
+}
+
+// For OAuth authentication
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Resource model for learning materials
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  type        String   // "video", "article", "book", "course", etc.
+  url         String?
+  coverImage  String?
+  coverColor  String?
+  tags        String[]
+  category    String?
+  progress    Float    @default(0) // Progress percentage (0-100)
+  rating      Int?     // User rating (1-5)
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes       Note[]
+  flashcards  Flashcard[]
+}
+
+// Note model
+model Note {
+  id         String   @id @default(cuid())
+  title      String?
+  content    String
+  tags       String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relationships
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceId String?
+  resource   Resource? @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+}
+
+// Flashcard model
+model Flashcard {
+  id         String   @id @default(cuid())
+  question   String
+  answer     String
+  tags       String[]
+  difficulty String?  // "easy", "medium", "hard"
+  nextReview DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relationships
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceId String?
+  resource   Resource? @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+}
+
+// Study session model
+model StudySession {
+  id         String   @id @default(cuid())
+  startTime  DateTime
+  endTime    DateTime?
+  duration   Float?   // in minutes
+  topic      String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  
+  // Relationships
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Chat session model for AI conversations
+model ChatSession {
+  id         String   @id @default(cuid())
+  title      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relationships
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages   ChatMessage[]
+}
+
+// Chat message model
+model ChatMessage {
+  id            String   @id @default(cuid())
+  content       String
+  role          String   // "user" or "assistant"
+  createdAt     DateTime @default(now())
+  
+  // Relationships
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+}

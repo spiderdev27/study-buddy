@@ -1,0 +1,70 @@
+/* Theme Debug CSS */
+.theme-debug {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 12px;
+  z-index: 9999;
+  max-width: 300px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.theme-debug-item {
+  margin-bottom: 5px;
+  display: flex;
+}
+
+.theme-debug-color {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  border: 1px solid white;
+}
+
+/* Theme Update Transitions */
+html.theme-updating * {
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s !important;
+}
+
+/* Theme Specific Debug */
+.theme-debug-default {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.theme-debug-default::after {
+  content: 'Using Default Theme';
+}
+
+.theme-debug-dark-academia {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.theme-debug-dark-academia::after {
+  content: 'Using Dark Academia Theme';
+}
+
+.theme-debug-nature {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.theme-debug-nature::after {
+  content: 'Using Nature Theme';
+}
+
+.theme-debug-minimalist {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.theme-debug-minimalist::after {
+  content: 'Using Minimalist Theme';
+} 
