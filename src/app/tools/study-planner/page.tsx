@@ -1,0 +1,690 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import { useTheme } from 'next-themes';
+import Image from 'next/image';
+import { Calendar, Clock, Upload, CheckCircle, FileText, BarChart2, Brain, Calendar as CalendarIcon } from 'lucide-react';
+import { GlowingParticles } from '@/components/effects/GlowingParticles';
+import { cn } from '@/lib/utils';
+import FocusMode from '@/components/study-planner/FocusMode';
+
+// Types for our study planner
+type StudyPlan = {
+  id: string;
+  title: string;
+  deadline: Date;
+  dailyHours: number;
+  progress: number;
+  topics: StudyTopic[];
+  createdAt: Date;
+};
+
+type StudyTopic = {
+  id: string;
+  title: string;
+  description: string;
+  duration: number; // in hours
+  status: 'pending' | 'in-progress' | 'completed' | 'needs-review';
+  subtopics: StudySubtopic[];
+  priority: 'low' | 'medium' | 'high';
+  scheduledDate?: Date;
+};
+
+type StudySubtopic = {
+  id: string;
+  title: string;
+  status: 'pending' | 'completed';
+  duration: number; // in minutes
+};
+
+export default function StudyPlanner() {
+  const [activeStep, setActiveStep] = useState<'upload' | 'configure' | 'results'>('upload');
+  const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [deadline, setDeadline] = useState<Date>(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)); // 30 days from now
+  const [dailyHours, setDailyHours] = useState(2);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [showFocusMode, setShowFocusMode] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<StudyTopic | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { theme } = useTheme();
+  const controls = useAnimation();
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const droppedFile = e.dataTransfer.files[0];
+      setFile(droppedFile);
+      simulateUploadProgress();
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+      simulateUploadProgress();
+    }
+  };
+
+  const simulateUploadProgress = () => {
+    setUploadProgress(0);
+    const interval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setActiveStep('configure');
+          }, 500);
+          return 100;
+        }
+        return prev + 5;
+      });
+    }, 100);
+  };
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    
+    // Simulate API call to Gemini for plan generation
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Mock study plan data
+    const mockStudyPlan: StudyPlan = {
+      id: 'plan-' + Date.now(),
+      title: file?.name.split('.')[0] || 'Study Plan',
+      deadline: deadline,
+      dailyHours: dailyHours,
+      progress: 0,
+      topics: generateMockTopics(),
+      createdAt: new Date()
+    };
+    
+    setStudyPlan(mockStudyPlan);
+    setIsGenerating(false);
+    setActiveStep('results');
+  };
+
+  const generateMockTopics = (): StudyTopic[] => {
+    const topics = [];
+    const subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Computer Science'];
+    const priorities = ['low', 'medium', 'high'];
+    
+    for (let i = 0; i < 6; i++) {
+      const subject = subjects[Math.floor(Math.random() * subjects.length)];
+      const subTopics = [];
+      
+      for (let j = 0; j < 3 + Math.floor(Math.random() * 4); j++) {
+        subTopics.push({
+          id: `subtopic-${i}-${j}`,
+          title: `${subject} subtopic ${j+1}`,
+          status: Math.random() > 0.7 ? 'completed' : 'pending',
+          duration: 30 + Math.floor(Math.random() * 60)
+        });
+      }
+      
+      topics.push({
+        id: `topic-${i}`,
+        title: `${subject} ${i+1}`,
+        description: `Study comprehensive ${subject} topics including fundamental concepts and problem-solving techniques.`,
+        duration: 2 + Math.floor(Math.random() * 4),
+        status: Math.random() > 0.7 ? 'completed' : Math.random() > 0.5 ? 'in-progress' : 'pending',
+        subtopics: subTopics,
+        priority: priorities[Math.floor(Math.random() * priorities.length)] as 'low' | 'medium' | 'high',
+        scheduledDate: new Date(Date.now() + (i * 24 * 60 * 60 * 1000))
+      });
+    }
+    
+    return topics;
+  };
+
+  const handleTopicStatusChange = (topicId: string, status: StudyTopic['status']) => {
+    if (!studyPlan) return;
+    
+    const updatedTopics = studyPlan.topics.map(topic => {
+      if (topic.id === topicId) {
+        return { ...topic, status };
+      }
+      return topic;
+    });
+    
+    // Calculate new progress percentage
+    const completedTopics = updatedTopics.filter(t => t.status === 'completed').length;
+    const totalTopics = updatedTopics.length;
+    const newProgress = (completedTopics / totalTopics) * 100;
+    
+    setStudyPlan({
+      ...studyPlan,
+      topics: updatedTopics,
+      progress: newProgress
+    });
+  };
+
+  const handleRestart = () => {
+    setFile(null);
+    setStudyPlan(null);
+    setActiveStep('upload');
+    setUploadProgress(0);
+  };
+
+  const handleStartFocus = (topic: StudyTopic) => {
+    setSelectedTopic(topic);
+    setShowFocusMode(true);
+  };
+
+  const handleFocusComplete = () => {
+    if (selectedTopic && studyPlan) {
+      // Mark the topic as in-progress when focus session ends
+      handleTopicStatusChange(selectedTopic.id, 'in-progress');
+    }
+    setShowFocusMode(false);
+  };
+
+  // Simple animation for the steps
+  useEffect(() => {
+    if (activeStep === 'upload') {
+      controls.start({ opacity: 1, y: 0 });
+    }
+  }, [activeStep, controls]);
+
+  // Calculate days left until deadline
+  const getDaysLeft = () => {
+    if (!studyPlan) return 0;
+    const today = new Date();
+    const deadlineDate = new Date(studyPlan.deadline);
+    const diff = deadlineDate.getTime() - today.getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+
+  return (
+    <div className="min-h-screen relative">
+      {/* Glowing particles background */}
+      <GlowingParticles />
+      
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        <header className="mb-10">
+          <h1 className="text-3xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+            AI Study Planner
+          </h1>
+          <p className="text-center text-text-secondary mt-2 max-w-2xl mx-auto">
+            Upload your syllabus, set your goals, and let our AI create a personalized study plan optimized for your learning journey
+          </p>
+        </header>
+        
+        {/* Stepper */}
+        <div className="flex justify-center mb-12">
+          <div className="flex items-center gap-1 md:gap-2">
+            <div 
+              className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                activeStep === 'upload' 
+                  ? "bg-primary text-white" 
+                  : "bg-card-bg text-text-primary"
+              )}
+            >
+              <Upload size={20} />
+            </div>
+            <div className={cn("h-1 w-10 md:w-16 transition-all", activeStep !== 'upload' ? "bg-primary" : "bg-card-bg")} />
+            
+            <div 
+              className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                activeStep === 'configure' 
+                  ? "bg-primary text-white" 
+                  : activeStep === 'results' 
+                    ? "bg-primary text-white" 
+                    : "bg-card-bg text-text-primary"
+              )}
+            >
+              <Clock size={20} />
+            </div>
+            <div className={cn("h-1 w-10 md:w-16 transition-all", activeStep === 'results' ? "bg-primary" : "bg-card-bg")} />
+            
+            <div 
+              className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                activeStep === 'results' 
+                  ? "bg-primary text-white" 
+                  : "bg-card-bg text-text-primary"
+              )}
+            >
+              <Calendar size={20} />
+            </div>
+          </div>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {activeStep === 'upload' && (
+            <motion.div
+              key="upload"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div 
+                className={cn(
+                  "relative border-2 border-dashed rounded-xl p-8 mb-8 text-center transition-all",
+                  "bg-white/20 dark:bg-card-bg/20 backdrop-blur-xl",
+                  "shadow-lg dark:shadow-none",
+                  "ring-1 ring-black/5 dark:ring-white/10",
+                  isDragging ? "border-primary" : "border-black/10 dark:border-white/10",
+                  file ? "pointer-events-none" : "cursor-pointer hover:bg-white/30 dark:hover:bg-card-bg/30"
+                )}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => !file && fileInputRef.current?.click()}
+              >
+                <div className="relative z-10">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                  />
+                  {!file ? (
+                    <div className="space-y-4">
+                      <div className="w-20 h-20 bg-primary/10 rounded-full mx-auto flex items-center justify-center">
+                        <Upload className="w-10 h-10 text-primary" />
+                      </div>
+                      <div className="text-2xl font-semibold text-black dark:text-white">
+                        Drop your syllabus here
+                      </div>
+                      <p className="text-gray-600 dark:text-gray-200">
+                        Upload PDF, Word document, text file or image of your syllabus
+                      </p>
+                      <button className="px-4 py-2 rounded-lg bg-white/10 dark:bg-white/5 hover:bg-white/20 dark:hover:bg-white/10 transition-colors backdrop-blur-sm text-black dark:text-white">
+                        Select File
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-center gap-4">
+                        <FileText className="w-10 h-10 text-primary" />
+                        <div className="text-left">
+                          <div className="font-medium text-black dark:text-white">{file.name}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="w-full bg-white/10 dark:bg-black/20 h-2 rounded-full overflow-hidden">
+                        <motion.div 
+                          className="h-full bg-gradient-to-r from-primary to-secondary"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${uploadProgress}%` }}
+                          transition={{ duration: 0.5 }}
+                        />
+                      </div>
+                      
+                      <div className="text-center text-black dark:text-white">
+                        {uploadProgress < 100 ? `Uploading: ${uploadProgress}%` : 'Upload Complete!'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                <p>Supported formats: PDF, DOC, DOCX, TXT, PNG, JPG</p>
+                <p className="mt-1">Max file size: 10MB</p>
+              </div>
+            </motion.div>
+          )}
+
+          {activeStep === 'configure' && (
+            <motion.div
+              key="configure"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="max-w-2xl mx-auto">
+                <div className="bg-white/20 dark:bg-card-bg/20 backdrop-blur-xl rounded-xl p-6 mb-8 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10">
+                  <h2 className="text-xl font-semibold mb-6 text-black dark:text-white">Configure Your Study Plan</h2>
+                  
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        When is your deadline?
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <CalendarIcon className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <input 
+                          type="date" 
+                          className="bg-white/10 dark:bg-black/20 border border-gray-300 dark:border-gray-700 text-black dark:text-white rounded-lg block w-full pl-10 p-2.5 focus:ring-2 focus:ring-primary/50 outline-none"
+                          min={new Date().toISOString().split('T')[0]}
+                          value={deadline.toISOString().split('T')[0]}
+                          onChange={(e) => setDeadline(new Date(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        How many hours can you study daily? ({dailyHours} hours)
+                      </label>
+                      <input 
+                        type="range" 
+                        min="1" 
+                        max="8" 
+                        step="0.5"
+                        value={dailyHours}
+                        onChange={(e) => setDailyHours(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-white/20 dark:bg-black/20 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <span>1 hour</span>
+                        <span>8 hours</span>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4">
+                      <button
+                        onClick={handleGenerate}
+                        disabled={isGenerating}
+                        className={cn(
+                          "w-full py-3 px-4 rounded-lg font-medium text-white transition-all",
+                          "bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90",
+                          "shadow-md hover:shadow-lg",
+                          isGenerating ? "opacity-70 cursor-not-allowed" : ""
+                        )}
+                      >
+                        {isGenerating ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                            <span>Generating your plan...</span>
+                          </div>
+                        ) : (
+                          <span>Generate Study Plan</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  <button
+                    onClick={handleRestart}
+                    className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
+                  >
+                    Upload a different file
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeStep === 'results' && studyPlan && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Plan Overview Card */}
+                <div className="lg:col-span-1">
+                  <div className="bg-white/20 dark:bg-card-bg/20 backdrop-blur-xl rounded-xl p-6 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10 h-full">
+                    <h2 className="text-xl font-semibold mb-4 text-black dark:text-white">Plan Overview</h2>
+                    
+                    <div className="space-y-6">
+                      <div className="space-y-1">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Plan Name</div>
+                        <div className="font-medium text-black dark:text-white">{studyPlan.title}</div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Deadline</div>
+                        <div className="font-medium text-black dark:text-white">
+                          {new Date(studyPlan.deadline).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Daily Study Time</div>
+                        <div className="font-medium text-black dark:text-white">{studyPlan.dailyHours} hours</div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Days Remaining</div>
+                        <div className="font-medium text-black dark:text-white">{getDaysLeft()} days</div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Overall Progress</div>
+                        <div className="w-full bg-white/10 dark:bg-black/20 h-2 rounded-full overflow-hidden">
+                          <motion.div 
+                            className="h-full bg-gradient-to-r from-primary to-secondary"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${studyPlan.progress}%` }}
+                            transition={{ duration: 1 }}
+                          />
+                        </div>
+                        <div className="text-right text-sm text-gray-500 dark:text-gray-400">
+                          {Math.round(studyPlan.progress)}% Complete
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4 space-y-2">
+                        <button
+                          onClick={handleRestart}
+                          className="w-full py-2 px-4 rounded-lg font-medium text-white bg-primary hover:bg-primary/90 transition-colors"
+                        >
+                          Create New Plan
+                        </button>
+                        
+                        <a 
+                          href="#" 
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            // Here you would generate and download a PDF or calendar file
+                            alert('Plan export feature will be implemented soon!');
+                          }}
+                          className="block w-full text-center py-2 px-4 rounded-lg font-medium border border-primary text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          Export Study Plan
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Topics List */}
+                <div className="lg:col-span-2">
+                  <div className="bg-white/20 dark:bg-card-bg/20 backdrop-blur-xl rounded-xl p-6 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10">
+                    <h2 className="text-xl font-semibold mb-4 text-black dark:text-white">Study Topics</h2>
+                    
+                    <div className="space-y-4">
+                      {studyPlan.topics.map((topic, index) => (
+                        <motion.div
+                          key={topic.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.1 }}
+                          className={cn(
+                            "border rounded-lg p-4 transition-all",
+                            "hover:shadow-md",
+                            topic.status === 'completed' 
+                              ? "border-green-200 dark:border-green-900/30 bg-green-50/30 dark:bg-green-900/10" 
+                              : topic.status === 'in-progress'
+                                ? "border-blue-200 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-900/10"
+                                : topic.status === 'needs-review'
+                                  ? "border-amber-200 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-900/10"
+                                  : "border-gray-200 dark:border-gray-700 bg-white/10 dark:bg-black/10"
+                          )}
+                        >
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-medium text-black dark:text-white">{topic.title}</h3>
+                                <div 
+                                  className={cn(
+                                    "text-xs px-2 py-0.5 rounded-full",
+                                    topic.priority === 'high' 
+                                      ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" 
+                                      : topic.priority === 'medium'
+                                        ? "bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+                                        : "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+                                  )}
+                                >
+                                  {topic.priority} priority
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{topic.description}</p>
+                              <div className="flex items-center gap-4 mt-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{topic.duration} hours</span>
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                  <CalendarIcon className="w-3 h-3" />
+                                  <span>
+                                    {topic.scheduledDate ? new Date(topic.scheduledDate).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric'
+                                    }) : 'Not scheduled'}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* Subtopics progress */}
+                              <div className="mt-3">
+                                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                  <span>Subtopics</span>
+                                  <span>
+                                    {topic.subtopics.filter(st => st.status === 'completed').length}/{topic.subtopics.length} completed
+                                  </span>
+                                </div>
+                                <div className="w-full bg-white/10 dark:bg-black/20 h-1.5 rounded-full overflow-hidden">
+                                  <motion.div 
+                                    className="h-full bg-gradient-to-r from-primary to-secondary"
+                                    initial={{ width: 0 }}
+                                    animate={{ 
+                                      width: `${(topic.subtopics.filter(st => st.status === 'completed').length / topic.subtopics.length) * 100}%` 
+                                    }}
+                                    transition={{ duration: 1 }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-col items-end gap-2">
+                              <select
+                                value={topic.status}
+                                onChange={(e) => handleTopicStatusChange(topic.id, e.target.value as StudyTopic['status'])}
+                                className="text-sm p-1 rounded bg-white/10 dark:bg-black/10 border border-gray-200 dark:border-gray-700 text-black dark:text-white outline-none focus:ring-1 focus:ring-primary/50"
+                              >
+                                <option value="pending">Not Started</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="needs-review">Needs Review</option>
+                              </select>
+                              
+                              <button
+                                onClick={() => handleStartFocus(topic)}
+                                className="text-xs px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1"
+                              >
+                                <Clock className="w-3 h-3" />
+                                <span>Focus Mode</span>
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* AI Recommendations Section */}
+              <div className="mt-8">
+                <div className="bg-white/20 dark:bg-card-bg/20 backdrop-blur-xl rounded-xl p-6 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Brain className="text-primary w-5 h-5" />
+                    <h2 className="text-xl font-semibold text-black dark:text-white">AI Recommendations</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg bg-white/20 dark:bg-black/20 text-black dark:text-white">
+                      <h3 className="font-medium mb-2">Optimize Your Study Schedule</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        Based on your progress, we recommend focusing on Mathematics and Physics topics next. 
+                        These are high-priority subjects with upcoming deadlines.
+                      </p>
+                    </div>
+                    
+                    <div className="p-4 rounded-lg bg-white/20 dark:bg-black/20 text-black dark:text-white">
+                      <h3 className="font-medium mb-2">Learning Resources</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        We've found excellent resources to help with Chemistry topics. Consider watching video lectures on
+                        chemical bonding and practicing with the suggested problem sets.
+                      </p>
+                    </div>
+                    
+                    <div className="p-4 rounded-lg bg-white/20 dark:bg-black/20 text-black dark:text-white">
+                      <h3 className="font-medium mb-2">Time Management</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        You're currently ahead of schedule! Consider using the extra time for revision or exploring advanced
+                        topics in Computer Science.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      
+      {/* Focus Mode Dialog */}
+      <AnimatePresence>
+        {showFocusMode && selectedTopic && (
+          <FocusMode
+            topicTitle={selectedTopic.title}
+            topicId={selectedTopic.id}
+            onComplete={handleFocusComplete}
+            onClose={() => setShowFocusMode(false)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+} 

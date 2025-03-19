@@ -42,6 +42,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   schedule      Json?
+  studyPlans    StudyPlan[]
 }
 
 // For OAuth authentication
@@ -168,4 +169,104 @@ model ChatMessage {
   // Relationships
   chatSessionId String
   chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+}
+
+model StudyTask {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  subject       String
+  priority      String         @default("medium")
+  dueDate       DateTime
+  duration      Int           // in minutes
+  status        String         @default("pending")
+  aiSuggestions String[]
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  sessions      StudySession[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model StudySession {
+  id           String     @id @default(cuid())
+  taskId       String
+  task         StudyTask  @relation(fields: [taskId], references: [id])
+  startTime    DateTime
+  endTime      DateTime?
+  duration     Int        // in seconds
+  notes        String?
+  productivity Float      // 0-100
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+// Add these new models for the Study Planner
+enum StudyTopicStatus {
+  pending
+  in_progress
+  completed
+  needs_review
+}
+
+enum StudyTopicPriority {
+  low
+  medium
+  high
+}
+
+model StudyPlan {
+  id          String      @id @default(cuid())
+  title       String
+  deadline    DateTime
+  dailyHours  Float
+  progress    Float       @default(0)
+  topics      StudyTopic[]
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model StudyTopic {
+  id            String          @id @default(cuid())
+  title         String
+  description   String?
+  duration      Float
+  status        StudyTopicStatus @default(pending)
+  priority      StudyTopicPriority @default(medium)
+  scheduledDate DateTime?
+  subtopics     StudySubtopic[]
+  sessions      StudySession[]
+  studyPlan     StudyPlan       @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+  studyPlanId   String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model StudySubtopic {
+  id            String          @id @default(cuid())
+  title         String
+  status        StudyTopicStatus @default(pending)
+  duration      Int
+  studyTopic    StudyTopic      @relation(fields: [studyTopicId], references: [id], onDelete: Cascade)
+  studyTopicId  String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model StudySession {
+  id               String       @id @default(cuid())
+  startTime        DateTime
+  endTime          DateTime?
+  duration         Int?
+  distractionCount Int          @default(0)
+  studyTopic       StudyTopic   @relation(fields: [studyTopicId], references: [id], onDelete: Cascade)
+  studyTopicId     String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 }
