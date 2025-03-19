@@ -243,8 +243,8 @@ export async function POST(req: NextRequest) {
               Your response MUST be a valid JSON object with no syntax errors.
               
               IMPORTANT REQUIREMENTS FOR JSON GENERATION:
-              1. Keep your response concise - limit to 5-7 topics maximum
-              2. Each topic should have 3-4 subtopics maximum
+              1. Include all relevant topics from the syllabus - don't limit the number
+              2. Each topic should have appropriate subtopics based on the content
               3. Keep all text descriptions under 100 characters
               4. Do not use quotes or special characters that would need escaping in JSON
               5. Make absolutely sure all JSON strings are properly terminated
@@ -324,8 +324,8 @@ export async function POST(req: NextRequest) {
               Your response MUST be a valid JSON object with no syntax errors.
               
               IMPORTANT REQUIREMENTS FOR JSON GENERATION:
-              1. Keep your response concise - limit to 5-7 topics maximum
-              2. Each topic should have 3-4 subtopics maximum
+              1. Include all relevant topics from the content - don't limit the number
+              2. Each topic should have appropriate subtopics based on the content
               3. Keep all text descriptions under 100 characters
               4. Do not use quotes or special characters that would need escaping in JSON
               5. Make absolutely sure all JSON strings are properly terminated
@@ -383,6 +383,7 @@ export async function POST(req: NextRequest) {
       - Generate concrete, realistic topics that would actually appear in a university course
       - Each topic should have a specific and descriptive title and explanation
       - For all subtopics, provide specific names that clearly describe what the student will study
+      - Include ALL relevant topics from the syllabus - don't artificially limit the number
       
       Format your response STRICTLY as JSON with the following structure. This is extremely important:
       {

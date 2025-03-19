@@ -228,15 +228,21 @@ export default function StudyPlanner() {
 
   const generateMockTopics = (): StudyTopic[] => {
     const topics = [];
-    const subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Computer Science'];
+    const subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Computer Science', 'Literature', 'Economics', 'Psychology', 'Sociology'];
     const priorities = ['low', 'medium', 'high'] as const;
     const statuses = ['pending', 'in-progress', 'completed', 'needs-review'] as const;
     
-    for (let i = 0; i < 6; i++) {
+    // Generate a random number of topics between 8-12 instead of hardcoded 6
+    const numTopics = 8 + Math.floor(Math.random() * 5);
+    
+    for (let i = 0; i < numTopics; i++) {
       const subject = subjects[Math.floor(Math.random() * subjects.length)];
       const subTopics: StudySubtopic[] = [];
       
-      for (let j = 0; j < 3 + Math.floor(Math.random() * 4); j++) {
+      // Generate a random number of subtopics between 3-6
+      const numSubtopics = 3 + Math.floor(Math.random() * 4);
+      
+      for (let j = 0; j < numSubtopics; j++) {
         subTopics.push({
           id: `subtopic-${i}-${j}`,
           title: `${subject} subtopic ${j+1}`,
