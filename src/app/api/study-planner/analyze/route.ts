@@ -7,6 +7,9 @@ const genAI = new GoogleGenerativeAI('AIzaSyDHtjSriBY4qmggRkfE4I-kQQg1j5ZBRpI');
 // Define the Gemini model to use - Using Gemini 2.0 Flash specifically as requested
 const GEMINI_MODEL = 'gemini-2.0-flash';
 
+// Set a timeout for Gemini API requests (30 seconds)
+const API_TIMEOUT = 30000;
+
 // Create a fallback study plan to use when API fails
 const createFallbackStudyPlan = (syllabusName: string) => {
   const today = new Date();
@@ -121,25 +124,48 @@ export async function POST(req: NextRequest) {
         const fileBuffer = await syllabusFile.arrayBuffer();
         const fileBase64 = Buffer.from(fileBuffer).toString('base64');
         
-        // Use Gemini 2.0 Flash to extract text from image
-        const visionModel = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-        
-        const visionResult = await visionModel.generateContent({
-          contents: [{
-            role: 'user',
-            parts: [
-              { text: 'Extract all text from this image of a syllabus or course curriculum. Return it as plain text, preserving the structure as much as possible.' },
-              { inlineData: { 
-                  mimeType: fileType,
-                  data: fileBase64
-                } 
-              }
-            ]
-          }]
-        });
-        
-        fileContent = visionResult.response.text();
-        console.log("Successfully extracted text from image");
+        // Limit the size of images being processed
+        if (fileBuffer.byteLength > 10 * 1024 * 1024) { // 10MB limit
+          console.log("Image file too large, using simplified content");
+          fileContent = `Image syllabus uploaded: ${syllabusFile.name}. 
+                        File is too large for detailed processing.
+                        Please provide key information from the syllabus: main topics, deadlines, and key requirements.`;
+        } else {
+          // Use Gemini 2.0 Flash to extract text from image
+          try {
+            const visionModel = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+            
+            // Add timeout for image processing
+            const imageTimeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('Image processing timeout')), 15000);
+            });
+            
+            const visionContentPromise = visionModel.generateContent({
+              contents: [{
+                role: 'user',
+                parts: [
+                  { text: 'Extract all text from this image of a syllabus or course curriculum. Return it as plain text, preserving the structure as much as possible.' },
+                  { inlineData: { 
+                      mimeType: fileType,
+                      data: fileBase64
+                    } 
+                  }
+                ]
+              }]
+            });
+            
+            // Race between the image processing and the timeout
+            const visionResult = await Promise.race([visionContentPromise, imageTimeoutPromise]) as any;
+            
+            fileContent = visionResult.response.text();
+            console.log("Successfully extracted text from image");
+          } catch (visionError) {
+            console.error("Error processing image with Gemini:", visionError);
+            fileContent = `Image syllabus uploaded: ${syllabusFile.name}. 
+                          Unable to extract text automatically.
+                          Creating a generic study plan based on common syllabus structure.`;
+          }
+        }
       } else if (fileType.includes('pdf')) {
         console.log("Processing PDF file (limited support)");
         // For PDF files, we need to extract text before sending to Gemini
@@ -214,21 +240,32 @@ export async function POST(req: NextRequest) {
     
     try {
       console.log("Initializing Gemini 2.0 Flash model for syllabus analysis");
+      console.log(`Using model: ${GEMINI_MODEL}, API version: v1`);
+      
       // Initialize the Gemini 2.0 Flash model
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
       
       console.log(`Sending request to Gemini API using ${GEMINI_MODEL}`);
+      
+      // Add timeout to prevent infinite waiting
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Gemini API request timeout')), API_TIMEOUT);
+      });
+      
       // Generate the study plan with structured output format
-      const result = await model.generateContent({
+      const contentPromise = model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.2,
           topP: 0.8,
           topK: 40,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 4096, // Reduced from 8192 to improve performance
           responseMimeType: 'application/json'
         }
       });
+      
+      // Race between the API call and the timeout
+      const result = await Promise.race([contentPromise, timeoutPromise]) as any;
       
       console.log("Received response from Gemini API");
       const response = await result.response;

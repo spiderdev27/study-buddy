@@ -10,6 +10,9 @@ const genAI = new GoogleGenerativeAI('AIzaSyDHtjSriBY4qmggRkfE4I-kQQg1j5ZBRpI');
 // Define the Gemini model to use - Using Gemini 2.0 Flash specifically as requested
 const GEMINI_MODEL = 'gemini-2.0-flash';
 
+// Set a timeout for Gemini API requests (20 seconds)
+const API_TIMEOUT = 20000;
+
 // Default recommendations to use as fallback
 const defaultRecommendations = [
   "Focus on completing one topic at a time rather than working on multiple topics simultaneously.",
@@ -82,12 +85,20 @@ export async function POST(req: NextRequest) {
     
     try {
       console.log("Initializing Gemini 2.0 Flash model");
+      console.log(`Using model: ${GEMINI_MODEL}, API version: v1`);
+      
       // Initialize the Gemini 2.0 Flash model
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
       
       console.log(`Sending request to Gemini API using ${GEMINI_MODEL}`);
+      
+      // Add timeout to prevent infinite waiting
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Gemini API request timeout')), API_TIMEOUT);
+      });
+      
       // Generate the recommendations
-      const result = await model.generateContent({
+      const contentPromise = model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.4,
@@ -96,6 +107,9 @@ export async function POST(req: NextRequest) {
           responseMimeType: 'application/json'
         }
       });
+      
+      // Race between the API call and the timeout
+      const result = await Promise.race([contentPromise, timeoutPromise]) as any;
       
       console.log("Received response from Gemini API");
       const response = await result.response;
