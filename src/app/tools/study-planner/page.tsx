@@ -55,6 +55,7 @@ export default function StudyPlanner() {
   const [usingFallbackData, setUsingFallbackData] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualSyllabusText, setManualSyllabusText] = useState('');
+  const [showFullSchedule, setShowFullSchedule] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme } = useTheme();
   const controls = useAnimation();
@@ -994,7 +995,10 @@ export default function StudyPlanner() {
                       
                       {scheduleData.length > 9 && (
                         <div className="p-4 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center">
-                          <button className="text-sm text-primary">
+                          <button 
+                            onClick={() => setShowFullSchedule(true)}
+                            className="text-sm text-primary hover:text-primary/80 transition-colors"
+                          >
                             View Full Schedule
                           </button>
                         </div>
@@ -1019,6 +1023,61 @@ export default function StudyPlanner() {
           />
         )}
       </AnimatePresence>
+
+      {/* Full Schedule Modal */}
+      {showFullSchedule && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-black dark:text-white">Complete Study Schedule</h3>
+              <button 
+                onClick={() => setShowFullSchedule(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto p-6 flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {scheduleData.map((day, index) => (
+                  <div 
+                    key={index}
+                    className="p-4 rounded-lg bg-white/20 dark:bg-black/20 text-black dark:text-white"
+                  >
+                    <div className="font-medium mb-2">
+                      {new Date(day.date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </div>
+                    <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                      {day.topics.map((topic: string, i: number) => (
+                        <li key={i} className="flex items-start gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary/70 mt-1.5"></div>
+                          <span>{topic}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex justify-end">
+              <button
+                onClick={() => setShowFullSchedule(false)}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
