@@ -120,57 +120,49 @@ export async function POST(req: NextRequest) {
         // For image files, provide a better description and guidance
         fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
                       
-                      This appears to be an image of a university course syllabus.
+                      This is an image containing course or syllabus information.
                       
-                      Since I cannot read the actual content from the image, please create a comprehensive study plan for a standard university Computer Science course with the following characteristics:
+                      Please try to extract any visible text or content from this image and analyze it as a syllabus.
+                      If you can't read specific content from the image, please analyze the syllabus based on:
                       
-                      - Course Title: "Advanced Programming Concepts"
-                      - Subject Area: Computer Science 
-                      - Level: Undergraduate (3rd year)
-                      - Duration: One semester (16 weeks)
+                      1. The filename: "${syllabusFile.name}"
+                      2. Any text or information you can extract from the image
+                      3. The goal of creating a comprehensive university-level study plan
                       
-                      The course should cover:
-                      - Object-oriented programming principles in depth
-                      - Data structures and algorithms
-                      - Software design patterns
-                      - Testing methodologies
-                      - Basic web development
-                      - Database integration
+                      IMPORTANT GUIDELINES:
+                      - DO NOT assume a specific subject area unless it's evident from the filename or image content
+                      - NEVER use generic placeholders like "[Course Name]" or "[Topic X]" in your response
+                      - Create specific, concrete topic titles based on whatever information you can detect
+                      - If you must generate content due to limited information, generate diverse topics
+                      - Each topic should have a specific title and detailed description
+                      - Topics should build logically from introductory to advanced concepts
                       
-                      For each topic:
-                      1. Create realistic, specific topic titles (NO placeholders or generic titles)
-                      2. Provide 3-5 detailed subtopics for each main topic
-                      3. Assign appropriate time estimates and priorities
-                      4. Ensure topics follow a logical progression from fundamentals to advanced concepts
-                      
-                      The plan should be comprehensive and detailed, suitable for a third-year Computer Science student.`;
+                      Your goal is to create a realistic, practical study plan that accurately reflects whatever
+                      content is visible in this image, without inventing a specific course or subject unless
+                      it's clearly indicated by the image or filename.`;
       } else if (syllabusFile.type.includes('pdf')) {
         fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
                       
-                      This appears to be a PDF of a university course syllabus.
+                      This is a PDF containing course or syllabus information.
                       
-                      Since I cannot extract the text content from the PDF, please create a comprehensive study plan for a standard university Data Science course with the following characteristics:
+                      Please try to extract any text or content from this PDF and analyze it as a syllabus.
+                      If you can't extract specific content, please analyze the syllabus based on:
                       
-                      - Course Title: "Foundations of Data Science" 
-                      - Subject Area: Data Science & Statistics
-                      - Level: Undergraduate (2nd year)
-                      - Duration: One semester (16 weeks)
+                      1. The filename: "${syllabusFile.name}"
+                      2. Any hints from the filename or metadata
+                      3. The goal of creating a comprehensive university-level study plan
                       
-                      The course should cover:
-                      - Statistical analysis fundamentals
-                      - Data cleaning and preprocessing
-                      - Data visualization techniques
-                      - Machine learning basics
-                      - Python programming for data analysis
-                      - Ethics in data science
+                      IMPORTANT GUIDELINES:
+                      - DO NOT assume a specific subject area unless it's evident from the filename
+                      - NEVER use generic placeholders like "[Course Name]" or "[Topic X]" in your response
+                      - Create specific, concrete topic titles based on whatever information you can detect
+                      - If you must generate content due to limited information, generate diverse topics
+                      - Each topic should have a specific title and detailed description
+                      - Topics should build logically from introductory to advanced concepts
                       
-                      For each topic:
-                      1. Create realistic, specific topic titles (NO placeholders or generic titles)
-                      2. Provide 3-5 detailed subtopics for each main topic
-                      3. Assign appropriate time estimates and priorities
-                      4. Ensure topics follow a logical progression from fundamentals to advanced concepts
-                      
-                      The plan should be comprehensive and detailed, suitable for a second-year Data Science student.`;
+                      Your goal is to create a realistic, practical study plan that accurately reflects whatever
+                      content is in this PDF, without inventing a specific course or subject unless
+                      it's clearly indicated by the PDF name or content.`;
       } else {
         // For text files, get actual content
         fileContent = await syllabusFile.text();
