@@ -4,8 +4,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Initialize the Google Generative AI SDK with the API key
 const genAI = new GoogleGenerativeAI('AIzaSyDHtjSriBY4qmggRkfE4I-kQQg1j5ZBRpI');
 
-// Define the Gemini model to use - consistently using Gemini 2.0 Flash for all operations
-const GEMINI_MODEL = 'gemini-1.5-flash';
+// Define the Gemini model to use - Using Gemini 2.0 Flash specifically as requested
+const GEMINI_MODEL = 'gemini-2.0-flash';
 
 // Create a fallback study plan to use when API fails
 const createFallbackStudyPlan = (syllabusName: string) => {
@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
     `;
     
     try {
-      console.log("Initializing Gemini 2.0 Flash model");
+      console.log("Initializing Gemini 2.0 Flash model for syllabus analysis");
       // Initialize the Gemini 2.0 Flash model
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
       
