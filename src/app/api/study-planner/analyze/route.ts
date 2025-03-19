@@ -152,171 +152,212 @@ export async function POST(req: NextRequest) {
     // Get other parameters
     const deadline = data.get('deadline') as string;
     const dailyHours = data.get('dailyHours') as string;
+    const manualSyllabusText = data.get('manual_syllabus_text') as string;
     
     console.log(`Study parameters - deadline: ${deadline}, dailyHours: ${dailyHours}`);
+    console.log(`Manual syllabus text provided: ${manualSyllabusText ? 'Yes' : 'No'}`);
     
-    // Process file content in the simplest way possible
+    // Initialize fileContent variable
     let fileContent = '';
-    try {
-      if (syllabusFile.type.includes('image/')) {
-        // For image files, use a two-step approach
-        try {
-          console.log("Using two-step approach for image analysis");
-          
-          // Step 1: Extract content from the image
-          const extractionPrompt = `
-            You are an expert at analyzing educational content. You are looking at an image that contains syllabus or course information.
+    
+    // If manual syllabus text is provided, use that instead of processing the file
+    if (manualSyllabusText && manualSyllabusText.trim()) {
+      console.log("Using manual syllabus text provided by user");
+      fileContent = manualSyllabusText.trim();
+    } else {
+      // Process file content in the simplest way possible
+      try {
+        if (syllabusFile.type.includes('image/')) {
+          // For image files, use multimodal vision approach
+          try {
+            console.log("Using vision-based approach for image analysis");
             
-            Your ONLY task is to extract any visible text, topics, or subject matter from this image: "${syllabusFile.name}".
+            // Convert image file to base64 for Gemini Vision API
+            const imageBuffer = await syllabusFile.arrayBuffer();
+            const base64Image = Buffer.from(imageBuffer).toString('base64');
+            const mimeType = syllabusFile.type;
             
-            Describe what you see in the image as thoroughly as possible, focusing on:
-            1. The main subject or course name
-            2. Any visible topics, units, or chapters
-            3. Any dates, deadlines, or schedule information
-            4. Any other relevant educational content
+            // Create inline data URI for the image
+            const imageDataUri = `data:${mimeType};base64,${base64Image}`;
             
-            Don't worry about creating a study plan yet - just extract and list all the information you can see.
-            If you can't see specific details clearly, state what you can reasonably infer from what is visible.
+            // Step 1: Extract content from the image using Gemini vision capabilities
+            const extractionPrompt = `
+              You are an expert at analyzing educational content. You are looking at an image of a syllabus or course material.
+              
+              Your task is to extract any visible text, topics, or subject matter from this image.
+              
+              Describe what you see in the image as thoroughly as possible, focusing on:
+              1. The main subject or course name
+              2. Any visible topics, units, or chapters
+              3. Any dates, deadlines, or schedule information
+              4. Any other relevant educational content
+              
+              If you can see text in the image, please extract and transcribe it as accurately as possible.
+              If you can't see specific details clearly, state so explicitly rather than making assumptions.
+              
+              Format your response as a straightforward description, including any topics, chapters or sections you identify.
+            `;
             
-            Format your response as a straightforward description, including any topics, chapters or sections you identify.
-          `;
-          
-          // Initialize the Gemini model for the extraction step
-          const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-          
-          const extractionResult = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: extractionPrompt }] }],
-            generationConfig: {
-              temperature: 0.1,
-              maxOutputTokens: 2048
+            // Initialize the Gemini multimodal model for vision capabilities
+            const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+            
+            console.log("Sending image to Gemini Vision API");
+            
+            const extractionResult = await visionModel.generateContent({
+              contents: [{ 
+                role: 'user', 
+                parts: [
+                  { text: extractionPrompt },
+                  { inlineData: { mimeType, data: base64Image } }
+                ] 
+              }],
+              generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 2048
+              }
+            });
+            
+            const extractedContent = extractionResult.response.text();
+            console.log("Vision extraction completed, content length:", extractedContent.length);
+            console.log("First 200 chars of extracted content:", extractedContent.substring(0, 200));
+            
+            if (extractedContent.toLowerCase().includes("can't see") || 
+                extractedContent.toLowerCase().includes("cannot see") ||
+                extractedContent.toLowerCase().includes("unable to see") ||
+                extractedContent.toLowerCase().includes("no visible text") ||
+                extractedContent.length < 50) {
+              console.log("Vision API could not extract meaningful content from image");
+              throw new Error("No meaningful content could be extracted from image");
             }
-          });
-          
-          const extractedContent = extractionResult.response.text();
-          console.log("Extraction step completed, content length:", extractedContent.length);
-          
-          // Step 2: Now create the study plan based on the extracted content
-          fileContent = `
-            The following content was extracted from an image of a syllabus or course material:
             
-            ${extractedContent.substring(0, 1000)}${extractedContent.length > 1000 ? "..." : ""}
+            // Step 2: Now create the study plan based on the extracted content
+            fileContent = `
+              The following content was extracted from an image of a syllabus or course material using image recognition:
+              
+              ${extractedContent.substring(0, 1500)}${extractedContent.length > 1500 ? "..." : ""}
+              
+              Based on this extracted information, please create a detailed study plan with specific topics, 
+              subtopics, and time allocations. Ensure all topics and subtopics are specific and concrete, 
+              not placeholders or generic items.
+              
+              Your response MUST be a valid JSON object with no syntax errors.
+              
+              IMPORTANT REQUIREMENTS FOR JSON GENERATION:
+              1. Keep your response concise - limit to 5-7 topics maximum
+              2. Each topic should have 3-4 subtopics maximum
+              3. Keep all text descriptions under 100 characters
+              4. Do not use quotes or special characters that would need escaping in JSON
+              5. Make absolutely sure all JSON strings are properly terminated
+              6. Double-check that all objects and arrays are properly closed
+              7. The entire JSON structure must be valid and complete
+              
+              The plan should reflect the actual content visible in the image as closely as possible,
+              and should provide a realistic roadmap for studying this material.
+              
+              If you aren't certain about some content, do not make assumptions - focus on what was clearly visible in the image.
+            `;
             
-            Based on this extracted information, please create a detailed study plan with specific topics, 
-            subtopics, and time allocations. Ensure all topics and subtopics are specific and concrete, 
-            not placeholders or generic items.
+          } catch (error) {
+            console.error("Error in vision-based image processing:", error);
+            // Fallback to user-friendly message
+            fileContent = `
+              Since the image content couldn't be properly analyzed, please create a study plan based on the following information:
+              
+              COURSE: General Study Skills
+              TOPICS:
+              - Effective note-taking techniques
+              - Active reading strategies
+              - Time management for students
+              - Exam preparation methods
+              - Research and writing skills
+              
+              Create a study plan covering these general academic skills that would be useful for any student.
+              Make it helpful, practical, and adaptable to the deadline and daily hours provided.
+            `;
+          }
+        } else if (syllabusFile.type.includes('pdf')) {
+          // For PDF files, use a similar two-step approach
+          try {
+            console.log("Using two-step approach for PDF analysis");
             
-            Your response MUST be a valid JSON object with no syntax errors.
+            // Step 1: Extract content from the PDF
+            const extractionPrompt = `
+              You are an expert at analyzing educational content. You are looking at a PDF that contains syllabus or course information.
+              
+              Your ONLY task is to extract any text, topics, or subject matter from this PDF: "${syllabusFile.name}".
+              
+              Describe what you believe is contained in this PDF as thoroughly as possible, focusing on:
+              1. The main subject or course name (if identifiable from the filename)
+              2. Any likely topics, units, or chapters based on the PDF name
+              3. Any dates or timing information that might be inferred
+              4. Any other relevant educational content
+              
+              Don't worry about creating a study plan yet - just extract and list all the information you can reasonably infer.
+              
+              Format your response as a straightforward description, including any topics, chapters or sections you identify.
+            `;
             
-            IMPORTANT REQUIREMENTS FOR JSON GENERATION:
-            1. Keep your response concise - limit to 5-7 topics maximum
-            2. Each topic should have 3-4 subtopics maximum
-            3. Keep all text descriptions under 100 characters
-            4. Do not use quotes or special characters that would need escaping in JSON
-            5. Make absolutely sure all JSON strings are properly terminated
-            6. Double-check that all objects and arrays are properly closed
-            7. The entire JSON structure must be valid and complete
+            // Initialize the Gemini model for the extraction step
+            const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
             
-            The plan should reflect the actual content visible in the image as closely as possible,
-            and should provide a realistic roadmap for studying this material.
-          `;
-          
-        } catch (error) {
-          console.error("Error in two-step image processing:", error);
-          // Fallback to basic guidance if the two-step approach fails
-          fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
-                        
-                        This is an image containing course or syllabus information.
-                        
-                        Please extract any visible text or content from this image and create a detailed study plan
-                        based on what you can see in the image. Focus on creating specific, concrete topic titles
-                        that accurately reflect whatever content is visible, without using generic placeholders or
-                        making up a subject area unless it's clearly indicated by the image content.
-                        
-                        Your goal is to create a realistic, practical study plan that accurately reflects whatever
-                        content is visible in this image.`;
+            const extractionResult = await model.generateContent({
+              contents: [{ role: 'user', parts: [{ text: extractionPrompt }] }],
+              generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 2048
+              }
+            });
+            
+            const extractedContent = extractionResult.response.text();
+            console.log("PDF extraction step completed, content length:", extractedContent.length);
+            
+            // Step 2: Now create the study plan based on the extracted content
+            fileContent = `
+              The following content was extracted or inferred from a PDF of a syllabus or course material:
+              
+              ${extractedContent.substring(0, 1000)}${extractedContent.length > 1000 ? "..." : ""}
+              
+              Based on this extracted information, please create a detailed study plan with specific topics, 
+              subtopics, and time allocations. Ensure all topics and subtopics are specific and concrete, 
+              not placeholders or generic items.
+              
+              Your response MUST be a valid JSON object with no syntax errors.
+              
+              IMPORTANT REQUIREMENTS FOR JSON GENERATION:
+              1. Keep your response concise - limit to 5-7 topics maximum
+              2. Each topic should have 3-4 subtopics maximum
+              3. Keep all text descriptions under 100 characters
+              4. Do not use quotes or special characters that would need escaping in JSON
+              5. Make absolutely sure all JSON strings are properly terminated
+              6. Double-check that all objects and arrays are properly closed
+              7. The entire JSON structure must be valid and complete
+              
+              The plan should reflect the actual content from the PDF as closely as possible,
+              and should provide a realistic roadmap for studying this material.
+            `;
+            
+          } catch (error) {
+            console.error("Error in two-step PDF processing:", error);
+            // Fallback to basic guidance if the two-step approach fails
+            fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
+                          
+                          This is a PDF containing course or syllabus information.
+                          
+                          Please extract any text or content from this PDF and create a detailed study plan
+                          based on the content. Focus on creating specific, concrete topic titles
+                          that accurately reflect the content, without using generic placeholders or
+                          making up a subject area unless it's clearly indicated.
+                          
+                          Your goal is to create a realistic, practical study plan based on the actual content of this PDF.`;
+          }
+        } else {
+          // For text files, get actual content
+          fileContent = await syllabusFile.text();
         }
-      } else if (syllabusFile.type.includes('pdf')) {
-        // For PDF files, use a similar two-step approach
-        try {
-          console.log("Using two-step approach for PDF analysis");
-          
-          // Step 1: Extract content from the PDF
-          const extractionPrompt = `
-            You are an expert at analyzing educational content. You are looking at a PDF that contains syllabus or course information.
-            
-            Your ONLY task is to extract any text, topics, or subject matter from this PDF: "${syllabusFile.name}".
-            
-            Describe what you believe is contained in this PDF as thoroughly as possible, focusing on:
-            1. The main subject or course name (if identifiable from the filename)
-            2. Any likely topics, units, or chapters based on the PDF name
-            3. Any dates or timing information that might be inferred
-            4. Any other relevant educational content
-            
-            Don't worry about creating a study plan yet - just extract and list all the information you can reasonably infer.
-            
-            Format your response as a straightforward description, including any topics, chapters or sections you identify.
-          `;
-          
-          // Initialize the Gemini model for the extraction step
-          const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-          
-          const extractionResult = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: extractionPrompt }] }],
-            generationConfig: {
-              temperature: 0.1,
-              maxOutputTokens: 2048
-            }
-          });
-          
-          const extractedContent = extractionResult.response.text();
-          console.log("PDF extraction step completed, content length:", extractedContent.length);
-          
-          // Step 2: Now create the study plan based on the extracted content
-          fileContent = `
-            The following content was extracted or inferred from a PDF of a syllabus or course material:
-            
-            ${extractedContent.substring(0, 1000)}${extractedContent.length > 1000 ? "..." : ""}
-            
-            Based on this extracted information, please create a detailed study plan with specific topics, 
-            subtopics, and time allocations. Ensure all topics and subtopics are specific and concrete, 
-            not placeholders or generic items.
-            
-            Your response MUST be a valid JSON object with no syntax errors.
-            
-            IMPORTANT REQUIREMENTS FOR JSON GENERATION:
-            1. Keep your response concise - limit to 5-7 topics maximum
-            2. Each topic should have 3-4 subtopics maximum
-            3. Keep all text descriptions under 100 characters
-            4. Do not use quotes or special characters that would need escaping in JSON
-            5. Make absolutely sure all JSON strings are properly terminated
-            6. Double-check that all objects and arrays are properly closed
-            7. The entire JSON structure must be valid and complete
-            
-            The plan should reflect the actual content from the PDF as closely as possible,
-            and should provide a realistic roadmap for studying this material.
-          `;
-          
-        } catch (error) {
-          console.error("Error in two-step PDF processing:", error);
-          // Fallback to basic guidance if the two-step approach fails
-          fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
-                        
-                        This is a PDF containing course or syllabus information.
-                        
-                        Please extract any text or content from this PDF and create a detailed study plan
-                        based on the content. Focus on creating specific, concrete topic titles
-                        that accurately reflect the content, without using generic placeholders or
-                        making up a subject area unless it's clearly indicated.
-                        
-                        Your goal is to create a realistic, practical study plan based on the actual content of this PDF.`;
-        }
-      } else {
-        // For text files, get actual content
-        fileContent = await syllabusFile.text();
+      } catch (error) {
+        console.error("Error processing file:", error);
+        fileContent = `File uploaded: ${syllabusFile.name}. Please analyze as a standard syllabus.`;
       }
-    } catch (error) {
-      console.error("Error processing file:", error);
-      fileContent = `File uploaded: ${syllabusFile.name}. Please analyze as a standard syllabus.`;
     }
     
     // Create a prompt for Gemini to analyze the syllabus

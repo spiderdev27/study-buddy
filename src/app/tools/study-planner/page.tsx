@@ -53,6 +53,8 @@ export default function StudyPlanner() {
   const [scheduleData, setScheduleData] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [usingFallbackData, setUsingFallbackData] = useState(false);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualSyllabusText, setManualSyllabusText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme } = useTheme();
   const controls = useAnimation();
@@ -126,6 +128,11 @@ export default function StudyPlanner() {
       formData.append('syllabus', file);
       formData.append('deadline', deadline.toISOString());
       formData.append('dailyHours', dailyHours.toString());
+      
+      // Add manual syllabus text if provided
+      if (manualSyllabusText.trim()) {
+        formData.append('manual_syllabus_text', manualSyllabusText);
+      }
       
       console.log("Sending request to analyze syllabus:", file.name, file.type);
       
@@ -669,8 +676,44 @@ export default function StudyPlanner() {
                           <div>
                             <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Using example study plan</p>
                             <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
-                              We couldn't analyze your syllabus completely, so we've generated an example study plan. Try uploading a text-based syllabus for better results.
+                              We couldn't analyze your syllabus completely. Try uploading a text-based syllabus or adding a description below.
                             </p>
+                            
+                            {!showManualInput ? (
+                              <button 
+                                onClick={() => setShowManualInput(true)}
+                                className="mt-2 text-xs px-3 py-1 bg-yellow-100 dark:bg-yellow-800/40 text-yellow-800 dark:text-yellow-300 rounded-md hover:bg-yellow-200 dark:hover:bg-yellow-800/60 transition-colors"
+                              >
+                                Add syllabus description
+                              </button>
+                            ) : (
+                              <div className="mt-3 space-y-2">
+                                <textarea
+                                  value={manualSyllabusText}
+                                  onChange={(e) => setManualSyllabusText(e.target.value)}
+                                  placeholder="Describe your course syllabus or enter topic names to study..."
+                                  className="w-full h-24 px-3 py-2 text-sm bg-white dark:bg-black/40 border border-yellow-300 dark:border-yellow-700 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                                />
+                                <div className="flex gap-2">
+                                  <button 
+                                    onClick={handleGenerate}
+                                    disabled={isGenerating || !manualSyllabusText.trim()}
+                                    className={cn(
+                                      "text-xs px-3 py-1 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors",
+                                      (isGenerating || !manualSyllabusText.trim()) ? "opacity-50 cursor-not-allowed" : ""
+                                    )}
+                                  >
+                                    {isGenerating ? "Generating..." : "Generate New Plan"}
+                                  </button>
+                                  <button 
+                                    onClick={() => setShowManualInput(false)}
+                                    className="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
