@@ -117,52 +117,135 @@ export async function POST(req: NextRequest) {
     let fileContent = '';
     try {
       if (syllabusFile.type.includes('image/')) {
-        // For image files, provide a better description and guidance
-        fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
-                      
-                      This is an image containing course or syllabus information.
-                      
-                      Please try to extract any visible text or content from this image and analyze it as a syllabus.
-                      If you can't read specific content from the image, please analyze the syllabus based on:
-                      
-                      1. The filename: "${syllabusFile.name}"
-                      2. Any text or information you can extract from the image
-                      3. The goal of creating a comprehensive university-level study plan
-                      
-                      IMPORTANT GUIDELINES:
-                      - DO NOT assume a specific subject area unless it's evident from the filename or image content
-                      - NEVER use generic placeholders like "[Course Name]" or "[Topic X]" in your response
-                      - Create specific, concrete topic titles based on whatever information you can detect
-                      - If you must generate content due to limited information, generate diverse topics
-                      - Each topic should have a specific title and detailed description
-                      - Topics should build logically from introductory to advanced concepts
-                      
-                      Your goal is to create a realistic, practical study plan that accurately reflects whatever
-                      content is visible in this image, without inventing a specific course or subject unless
-                      it's clearly indicated by the image or filename.`;
+        // For image files, use a two-step approach
+        try {
+          console.log("Using two-step approach for image analysis");
+          
+          // Step 1: Extract content from the image
+          const extractionPrompt = `
+            You are an expert at analyzing educational content. You are looking at an image that contains syllabus or course information.
+            
+            Your ONLY task is to extract any visible text, topics, or subject matter from this image: "${syllabusFile.name}".
+            
+            Describe what you see in the image as thoroughly as possible, focusing on:
+            1. The main subject or course name
+            2. Any visible topics, units, or chapters
+            3. Any dates, deadlines, or schedule information
+            4. Any other relevant educational content
+            
+            Don't worry about creating a study plan yet - just extract and list all the information you can see.
+            If you can't see specific details clearly, state what you can reasonably infer from what is visible.
+            
+            Format your response as a straightforward description, including any topics, chapters or sections you identify.
+          `;
+          
+          // Initialize the Gemini model for the extraction step
+          const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+          
+          const extractionResult = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: extractionPrompt }] }],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 2048
+            }
+          });
+          
+          const extractedContent = extractionResult.response.text();
+          console.log("Extraction step completed, content length:", extractedContent.length);
+          
+          // Step 2: Now create the study plan based on the extracted content
+          fileContent = `
+            The following content was extracted from an image of a syllabus or course material:
+            
+            ${extractedContent}
+            
+            Based on this extracted information, please create a detailed study plan with specific topics, 
+            subtopics, and time allocations. Ensure all topics and subtopics are specific and concrete, 
+            not placeholders or generic items.
+            
+            The plan should reflect the actual content visible in the image as closely as possible,
+            and should provide a realistic roadmap for studying this material.
+          `;
+          
+        } catch (error) {
+          console.error("Error in two-step image processing:", error);
+          // Fallback to basic guidance if the two-step approach fails
+          fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
+                        
+                        This is an image containing course or syllabus information.
+                        
+                        Please extract any visible text or content from this image and create a detailed study plan
+                        based on what you can see in the image. Focus on creating specific, concrete topic titles
+                        that accurately reflect whatever content is visible, without using generic placeholders or
+                        making up a subject area unless it's clearly indicated by the image content.
+                        
+                        Your goal is to create a realistic, practical study plan that accurately reflects whatever
+                        content is visible in this image.`;
+        }
       } else if (syllabusFile.type.includes('pdf')) {
-        fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
-                      
-                      This is a PDF containing course or syllabus information.
-                      
-                      Please try to extract any text or content from this PDF and analyze it as a syllabus.
-                      If you can't extract specific content, please analyze the syllabus based on:
-                      
-                      1. The filename: "${syllabusFile.name}"
-                      2. Any hints from the filename or metadata
-                      3. The goal of creating a comprehensive university-level study plan
-                      
-                      IMPORTANT GUIDELINES:
-                      - DO NOT assume a specific subject area unless it's evident from the filename
-                      - NEVER use generic placeholders like "[Course Name]" or "[Topic X]" in your response
-                      - Create specific, concrete topic titles based on whatever information you can detect
-                      - If you must generate content due to limited information, generate diverse topics
-                      - Each topic should have a specific title and detailed description
-                      - Topics should build logically from introductory to advanced concepts
-                      
-                      Your goal is to create a realistic, practical study plan that accurately reflects whatever
-                      content is in this PDF, without inventing a specific course or subject unless
-                      it's clearly indicated by the PDF name or content.`;
+        // For PDF files, use a similar two-step approach
+        try {
+          console.log("Using two-step approach for PDF analysis");
+          
+          // Step 1: Extract content from the PDF
+          const extractionPrompt = `
+            You are an expert at analyzing educational content. You are looking at a PDF that contains syllabus or course information.
+            
+            Your ONLY task is to extract any text, topics, or subject matter from this PDF: "${syllabusFile.name}".
+            
+            Describe what you believe is contained in this PDF as thoroughly as possible, focusing on:
+            1. The main subject or course name (if identifiable from the filename)
+            2. Any likely topics, units, or chapters based on the PDF name
+            3. Any dates or timing information that might be inferred
+            4. Any other relevant educational content
+            
+            Don't worry about creating a study plan yet - just extract and list all the information you can reasonably infer.
+            
+            Format your response as a straightforward description, including any topics, chapters or sections you identify.
+          `;
+          
+          // Initialize the Gemini model for the extraction step
+          const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+          
+          const extractionResult = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: extractionPrompt }] }],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 2048
+            }
+          });
+          
+          const extractedContent = extractionResult.response.text();
+          console.log("PDF extraction step completed, content length:", extractedContent.length);
+          
+          // Step 2: Now create the study plan based on the extracted content
+          fileContent = `
+            The following content was extracted or inferred from a PDF of a syllabus or course material:
+            
+            ${extractedContent}
+            
+            Based on this extracted information, please create a detailed study plan with specific topics, 
+            subtopics, and time allocations. Ensure all topics and subtopics are specific and concrete, 
+            not placeholders or generic items.
+            
+            The plan should reflect the actual content from the PDF as closely as possible,
+            and should provide a realistic roadmap for studying this material.
+          `;
+          
+        } catch (error) {
+          console.error("Error in two-step PDF processing:", error);
+          // Fallback to basic guidance if the two-step approach fails
+          fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
+                        
+                        This is a PDF containing course or syllabus information.
+                        
+                        Please extract any text or content from this PDF and create a detailed study plan
+                        based on the content. Focus on creating specific, concrete topic titles
+                        that accurately reflect the content, without using generic placeholders or
+                        making up a subject area unless it's clearly indicated.
+                        
+                        Your goal is to create a realistic, practical study plan based on the actual content of this PDF.`;
+        }
       } else {
         // For text files, get actual content
         fileContent = await syllabusFile.text();
