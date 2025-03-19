@@ -797,6 +797,84 @@ export default function StudyPlanner() {
                                   />
                                 </div>
                               </div>
+
+                              {/* Add expandable subtopics list */}
+                              {topic.subtopics.length > 0 && (
+                                <div className="mt-4">
+                                  <details className="group">
+                                    <summary className="flex items-center cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                      <svg 
+                                        className="w-4 h-4 mr-1 transition-transform group-open:rotate-90" 
+                                        fill="none" 
+                                        viewBox="0 0 24 24" 
+                                        stroke="currentColor"
+                                      >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      </svg>
+                                      View {topic.subtopics.length} Subtopics
+                                    </summary>
+                                    <div className="mt-3 pl-5 border-l-2 border-gray-200 dark:border-gray-700 space-y-3">
+                                      {topic.subtopics.map((subtopic, idx) => (
+                                        <div key={subtopic.id} className="flex items-start justify-between">
+                                          <div className="flex items-start gap-2">
+                                            <div className="mt-0.5">
+                                              <input
+                                                type="checkbox"
+                                                id={`subtopic-${subtopic.id}`}
+                                                checked={subtopic.status === 'completed'}
+                                                onChange={(e) => {
+                                                  const updatedTopics = [...studyPlan.topics];
+                                                  const topicIndex = updatedTopics.findIndex(t => t.id === topic.id);
+                                                  const subtopicIndex = updatedTopics[topicIndex].subtopics.findIndex(st => st.id === subtopic.id);
+                                                  
+                                                  updatedTopics[topicIndex].subtopics[subtopicIndex].status = e.target.checked ? 'completed' : 'pending';
+                                                  
+                                                  // Calculate new topic progress
+                                                  const completedSubtopics = updatedTopics[topicIndex].subtopics.filter(st => st.status === 'completed').length;
+                                                  const totalSubtopics = updatedTopics[topicIndex].subtopics.length;
+                                                  
+                                                  // Update topic status based on subtopics completion
+                                                  if (completedSubtopics === totalSubtopics) {
+                                                    updatedTopics[topicIndex].status = 'completed';
+                                                  } else if (completedSubtopics > 0) {
+                                                    updatedTopics[topicIndex].status = 'in-progress';
+                                                  }
+                                                  
+                                                  // Calculate overall progress
+                                                  const completedTopics = updatedTopics.filter(t => t.status === 'completed').length;
+                                                  const totalTopics = updatedTopics.length;
+                                                  const newProgress = (completedTopics / totalTopics) * 100;
+                                                  
+                                                  setStudyPlan({
+                                                    ...studyPlan,
+                                                    topics: updatedTopics,
+                                                    progress: newProgress
+                                                  });
+                                                }}
+                                                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/50 transition-colors"
+                                              />
+                                            </div>
+                                            <label 
+                                              htmlFor={`subtopic-${subtopic.id}`}
+                                              className={cn(
+                                                "text-sm cursor-pointer", 
+                                                subtopic.status === 'completed' 
+                                                  ? "text-gray-500 dark:text-gray-400 line-through"
+                                                  : "text-gray-700 dark:text-gray-300"
+                                              )}
+                                            >
+                                              {subtopic.title}
+                                              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                                ({subtopic.duration} min)
+                                              </span>
+                                            </label>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </details>
+                                </div>
+                              )}
                             </div>
                             
                             <div className="flex flex-col items-end gap-2">

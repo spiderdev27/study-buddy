@@ -20,9 +20,13 @@ const createFallbackStudyPlan = (syllabusName: string) => {
       duration: 4,
       priority: "high",
       subtopics: [
-        { title: "Algebra Fundamentals", duration: 60 },
-        { title: "Calculus Basics", duration: 90 },
-        { title: "Probability Theory", duration: 60 }
+        { title: "Linear Algebra and Matrix Operations", duration: 60 },
+        { title: "Differential Calculus and Optimization", duration: 90 },
+        { title: "Integral Calculus and Applications", duration: 60 },
+        { title: "Probability Theory and Random Variables", duration: 60 },
+        { title: "Statistical Distributions and Testing", duration: 60 },
+        { title: "Series and Sequences", duration: 45 },
+        { title: "Vector Calculus", duration: 60 }
       ]
     },
     {
@@ -31,9 +35,13 @@ const createFallbackStudyPlan = (syllabusName: string) => {
       duration: 3,
       priority: "medium",
       subtopics: [
-        { title: "Classical Mechanics", duration: 60 },
-        { title: "Electricity and Magnetism", duration: 60 },
-        { title: "Modern Physics", duration: 60 }
+        { title: "Newtonian Mechanics and Forces", duration: 60 },
+        { title: "Work, Energy and Power", duration: 45 },
+        { title: "Rotational Motion and Angular Momentum", duration: 60 },
+        { title: "Electrostatics and Coulomb's Law", duration: 60 },
+        { title: "Magnetic Fields and Electromagnetic Induction", duration: 60 },
+        { title: "Wave Mechanics and Interference", duration: 45 },
+        { title: "Introduction to Quantum Physics", duration: 60 }
       ]
     },
     {
@@ -42,29 +50,49 @@ const createFallbackStudyPlan = (syllabusName: string) => {
       duration: 5,
       priority: "high",
       subtopics: [
-        { title: "Data Structures", duration: 90 },
-        { title: "Algorithms", duration: 90 },
-        { title: "Object-Oriented Programming", duration: 60 },
-        { title: "Database Fundamentals", duration: 60 }
+        { title: "Data Structures: Arrays, Lists and Trees", duration: 90 },
+        { title: "Algorithm Analysis and Big-O Notation", duration: 90 },
+        { title: "Sorting and Searching Algorithms", duration: 60 },
+        { title: "Object-Oriented Programming Principles", duration: 60 },
+        { title: "Database Design and SQL Fundamentals", duration: 60 },
+        { title: "Network Protocols and Architecture", duration: 60 },
+        { title: "Operating System Concepts", duration: 60 }
+      ]
+    },
+    {
+      title: "Research Methodology",
+      description: "Approaches to scientific research and experimentation",
+      duration: 3,
+      priority: "medium",
+      subtopics: [
+        { title: "Research Design and Hypothesis Formulation", duration: 60 },
+        { title: "Quantitative vs. Qualitative Methods", duration: 45 },
+        { title: "Data Collection Techniques", duration: 60 },
+        { title: "Statistical Analysis of Research Data", duration: 90 },
+        { title: "Interpretation and Research Findings", duration: 60 },
+        { title: "Research Ethics and Integrity", duration: 45 },
+        { title: "Academic Writing and Publication", duration: 60 }
       ]
     }
   ];
   
-  // Create a simple schedule for the next 7 days
+  // Create a simple schedule for the next 14 days
   const schedule = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 14; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
     const dateStr = date.toISOString().split('T')[0];
     
     // Assign topics to different days
     let dayTopics = [];
-    if (i % 3 === 0) {
+    if (i % 4 === 0) {
       dayTopics.push("Mathematics Foundations");
-    } else if (i % 3 === 1) {
+    } else if (i % 4 === 1) {
       dayTopics.push("Physics Principles");
-    } else {
+    } else if (i % 4 === 2) {
       dayTopics.push("Computer Science Fundamentals");
+    } else {
+      dayTopics.push("Research Methodology");
     }
     
     schedule.push({
@@ -81,7 +109,9 @@ const createFallbackStudyPlan = (syllabusName: string) => {
       "Use active recall techniques rather than passive reading",
       "Schedule regular review sessions to reinforce learning",
       "Focus on understanding concepts rather than memorizing facts",
-      "Take breaks using the Pomodoro technique (25 min study, 5 min break)"
+      "Take breaks using the Pomodoro technique (25 min study, 5 min break)",
+      "Connect new information to existing knowledge for better retention",
+      "Teach concepts to others to solidify your understanding"
     ]
   };
 };
@@ -244,12 +274,13 @@ export async function POST(req: NextRequest) {
               
               IMPORTANT REQUIREMENTS FOR JSON GENERATION:
               1. Include all relevant topics from the syllabus - don't limit the number
-              2. Each topic should have appropriate subtopics based on the content
-              3. Keep all text descriptions under 100 characters
-              4. Do not use quotes or special characters that would need escaping in JSON
-              5. Make absolutely sure all JSON strings are properly terminated
-              6. Double-check that all objects and arrays are properly closed
-              7. The entire JSON structure must be valid and complete
+              2. For EACH topic, provide at least 5-7 detailed and specific subtopics
+              3. Each subtopic must be specific and descriptive, not generic
+              4. Keep all text descriptions under 100 characters
+              5. Do not use quotes or special characters that would need escaping in JSON
+              6. Make absolutely sure all JSON strings are properly terminated
+              7. Double-check that all objects and arrays are properly closed
+              8. The entire JSON structure must be valid and complete
               
               The plan should reflect the actual content visible in the image as closely as possible,
               and should provide a realistic roadmap for studying this material.
@@ -325,12 +356,13 @@ export async function POST(req: NextRequest) {
               
               IMPORTANT REQUIREMENTS FOR JSON GENERATION:
               1. Include all relevant topics from the content - don't limit the number
-              2. Each topic should have appropriate subtopics based on the content
-              3. Keep all text descriptions under 100 characters
-              4. Do not use quotes or special characters that would need escaping in JSON
-              5. Make absolutely sure all JSON strings are properly terminated
-              6. Double-check that all objects and arrays are properly closed
-              7. The entire JSON structure must be valid and complete
+              2. For EACH topic, provide at least 5-7 detailed and specific subtopics
+              3. Each subtopic must be specific and descriptive, not generic
+              4. Keep all text descriptions under 100 characters
+              5. Do not use quotes or special characters that would need escaping in JSON
+              6. Make absolutely sure all JSON strings are properly terminated
+              7. Double-check that all objects and arrays are properly closed
+              8. The entire JSON structure must be valid and complete
               
               The plan should reflect the actual content from the PDF as closely as possible,
               and should provide a realistic roadmap for studying this material.
@@ -383,6 +415,7 @@ export async function POST(req: NextRequest) {
       - Generate concrete, realistic topics that would actually appear in a university course
       - Each topic should have a specific and descriptive title and explanation
       - For all subtopics, provide specific names that clearly describe what the student will study
+      - Each topic MUST have at least 5-7 detailed subtopics that break down the main topic into learnable chunks
       - Include ALL relevant topics from the syllabus - don't artificially limit the number
       
       Format your response STRICTLY as JSON with the following structure. This is extremely important:
