@@ -4,14 +4,11 @@ import { NextRequest, NextResponse } from 'next/server';
 // import { authOptions } from '@/lib/auth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize the Google Generative AI SDK with the API key
-const genAI = new GoogleGenerativeAI('AIzaSyDHtjSriBY4qmggRkfE4I-kQQg1j5ZBRpI');
+// Initialize the Google Generative AI SDK with the correct API key
+const genAI = new GoogleGenerativeAI('AIzaSyCRuP-Osv8yVY3Z2kYLiUD2IKrqHPerRFg');
 
 // Define the Gemini model to use - Using Gemini 2.0 Flash specifically as requested
 const GEMINI_MODEL = 'gemini-2.0-flash';
-
-// Set a timeout for Gemini API requests (20 seconds)
-const API_TIMEOUT = 20000;
 
 // Default recommendations to use as fallback
 const defaultRecommendations = [
@@ -26,22 +23,11 @@ export async function POST(req: NextRequest) {
   try {
     console.log("Starting recommendations generation process");
     
-    // Remove authentication check
-    // Check authentication
-    // const session = await getServerSession(authOptions);
-    // if (!session?.user) {
-    //   return NextResponse.json(
-    //     { error: 'Unauthorized' },
-    //     { status: 401 }
-    //   );
-    // }
-
     // Extract data from the request body
     let requestData;
     
     try {
       requestData = await req.json();
-      console.log("Request data parsed successfully");
     } catch (parseError) {
       console.error("Error parsing request JSON:", parseError);
       return NextResponse.json({ 
@@ -58,9 +44,6 @@ export async function POST(req: NextRequest) {
       dailyHours = 2,
       progress = 0
     } = requestData;
-    
-    console.log(`Study progress - completed: ${completedTopics.length}, in-progress: ${inProgressTopics.length}, pending: ${pendingTopics.length}`);
-    console.log(`Deadline: ${deadline}, Daily hours: ${dailyHours}, Overall progress: ${progress}%`);
     
     // Create a prompt for Gemini to generate personalized recommendations
     const prompt = `
@@ -87,84 +70,52 @@ export async function POST(req: NextRequest) {
       console.log("Initializing Gemini 2.0 Flash model");
       console.log(`Using model: ${GEMINI_MODEL}, API version: v1`);
       
-      // Initialize the Gemini 2.0 Flash model
+      // Initialize the Gemini model and send request directly
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
       
-      console.log(`Sending request to Gemini API using ${GEMINI_MODEL}`);
-      
-      // Add timeout to prevent infinite waiting
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Gemini API request timeout')), API_TIMEOUT);
-      });
-      
-      // Generate the recommendations
-      const contentPromise = model.generateContent({
+      const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.4,
-          topP: 0.8,
           maxOutputTokens: 1024,
           responseMimeType: 'application/json'
         }
       });
       
-      // Race between the API call and the timeout
-      const result = await Promise.race([contentPromise, timeoutPromise]) as any;
-      
       console.log("Received response from Gemini API");
-      const response = await result.response;
+      
+      const text = result.response.text();
       let jsonResult;
       
       try {
-        // First try to get JSON directly
-        const text = response.text();
-        console.log("Parsing JSON response");
+        // Parse the response
         jsonResult = JSON.parse(text);
-        console.log("Successfully parsed JSON response");
-      } catch (error) {
-        console.error("Error parsing direct JSON response:", error);
         
-        // Fallback approach
-        const textResult = response.text();
-        console.log("Attempting to extract JSON from text response");
-        try {
-          const jsonMatch = textResult.match(/```json\n([\s\S]*)\n```/) || 
-                            textResult.match(/```\n([\s\S]*)\n```/) ||
-                            [null, textResult];
-                            
-          jsonResult = JSON.parse(jsonMatch[1] || textResult);
-          console.log("Successfully extracted JSON from text response");
-        } catch (parseError) {
-          console.error("Error parsing Gemini response:", parseError);
-          console.log("Using default recommendations");
-          // If all else fails, provide default recommendations
-          jsonResult = {
-            recommendations: defaultRecommendations
-          };
+        // Ensure we have recommendations
+        if (!jsonResult.recommendations || !Array.isArray(jsonResult.recommendations) || jsonResult.recommendations.length === 0) {
+          jsonResult.recommendations = defaultRecommendations;
         }
-      }
-      
-      // Ensure we have recommendations
-      if (!jsonResult.recommendations || !Array.isArray(jsonResult.recommendations) || jsonResult.recommendations.length === 0) {
-        console.log("Invalid response structure (missing recommendations array), using defaults");
-        jsonResult.recommendations = defaultRecommendations;
+      } catch (error) {
+        console.error("Error parsing JSON response:", error);
+        // Fallback to default recommendations
+        jsonResult = {
+          recommendations: defaultRecommendations
+        };
       }
       
       // Return the recommendations
-      console.log("Returning successful response");
       return NextResponse.json(jsonResult);
       
-    } catch (aiError) {
-      console.error("Error calling Gemini API:", aiError);
-      console.log("Using default recommendations due to API error");
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+      // Return default recommendations
       return NextResponse.json({ 
         recommendations: defaultRecommendations 
       });
     }
-    
   } catch (error) {
-    console.error("Error generating recommendations:", error);
-    console.log("Using default recommendations due to unexpected error");
+    console.error("Unexpected error:", error);
+    // Return default recommendations for any error
     return NextResponse.json({ 
       recommendations: defaultRecommendations 
     });

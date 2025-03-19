@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize the Google Generative AI SDK with the API key
-const genAI = new GoogleGenerativeAI('AIzaSyDHtjSriBY4qmggRkfE4I-kQQg1j5ZBRpI');
+// Initialize the Google Generative AI SDK with the correct API key
+const genAI = new GoogleGenerativeAI('AIzaSyCRuP-Osv8yVY3Z2kYLiUD2IKrqHPerRFg');
 
 // Define the Gemini model to use - Using Gemini 2.0 Flash specifically as requested
 const GEMINI_MODEL = 'gemini-2.0-flash';
@@ -113,84 +113,20 @@ export async function POST(req: NextRequest) {
     
     console.log(`Study parameters - deadline: ${deadline}, dailyHours: ${dailyHours}`);
     
-    // Handle the file based on its type
+    // Process file content in the simplest way possible
     let fileContent = '';
-    const fileType = syllabusFile.type;
-    
     try {
-      if (fileType.includes('image/')) {
-        console.log("Processing image file");
-        // For image files, convert to base64 and send to Gemini Vision model
-        const fileBuffer = await syllabusFile.arrayBuffer();
-        const fileBase64 = Buffer.from(fileBuffer).toString('base64');
-        
-        // Limit the size of images being processed
-        if (fileBuffer.byteLength > 10 * 1024 * 1024) { // 10MB limit
-          console.log("Image file too large, using simplified content");
-          fileContent = `Image syllabus uploaded: ${syllabusFile.name}. 
-                        File is too large for detailed processing.
-                        Please provide key information from the syllabus: main topics, deadlines, and key requirements.`;
-        } else {
-          // Use Gemini 2.0 Flash to extract text from image
-          try {
-            const visionModel = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-            
-            // Add timeout for image processing
-            const imageTimeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Image processing timeout')), 15000);
-            });
-            
-            const visionContentPromise = visionModel.generateContent({
-              contents: [{
-                role: 'user',
-                parts: [
-                  { text: 'Extract all text from this image of a syllabus or course curriculum. Return it as plain text, preserving the structure as much as possible.' },
-                  { inlineData: { 
-                      mimeType: fileType,
-                      data: fileBase64
-                    } 
-                  }
-                ]
-              }]
-            });
-            
-            // Race between the image processing and the timeout
-            const visionResult = await Promise.race([visionContentPromise, imageTimeoutPromise]) as any;
-            
-            fileContent = visionResult.response.text();
-            console.log("Successfully extracted text from image");
-          } catch (visionError) {
-            console.error("Error processing image with Gemini:", visionError);
-            fileContent = `Image syllabus uploaded: ${syllabusFile.name}. 
-                          Unable to extract text automatically.
-                          Creating a generic study plan based on common syllabus structure.`;
-          }
-        }
-      } else if (fileType.includes('pdf')) {
-        console.log("Processing PDF file (limited support)");
-        // For PDF files, we need to extract text before sending to Gemini
-        // In a real implementation, you would use a PDF parsing library
-        fileContent = `PDF file uploaded: ${syllabusFile.name}. 
-                      Since PDF parsing requires additional libraries, we're proceeding with a basic analysis.
-                      Please implement proper PDF parsing in production.`;
+      // For all file types, just get the text directly or indicate it's a non-text file
+      if (syllabusFile.type.includes('image/') || syllabusFile.type.includes('pdf')) {
+        fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
+                      Please analyze this as a typical university syllabus with standard sections
+                      like course objectives, topics, readings, and assignments.`;
       } else {
-        console.log("Processing text file");
-        // For text files, Word docs, etc., just read as text
         fileContent = await syllabusFile.text();
       }
-    } catch (fileError) {
-      console.error("Error processing file:", fileError);
-      fileContent = `Unable to process file content. Using filename as reference: ${syllabusFile.name}`;
+    } catch (error) {
+      fileContent = `File uploaded: ${syllabusFile.name}. Please analyze as a standard syllabus.`;
     }
-    
-    // Check if we have content to analyze
-    if (!fileContent || fileContent.trim().length === 0) {
-      console.log("No content extracted from file, using fallback");
-      const fallbackPlan = createFallbackStudyPlan(syllabusFile.name);
-      return NextResponse.json(fallbackPlan);
-    }
-    
-    console.log("File content extracted, length:", fileContent.length);
     
     // Create a prompt for Gemini to analyze the syllabus
     const prompt = `
@@ -239,85 +175,47 @@ export async function POST(req: NextRequest) {
     `;
     
     try {
-      console.log("Initializing Gemini 2.0 Flash model for syllabus analysis");
+      console.log("Initializing Gemini 2.0 Flash model");
       console.log(`Using model: ${GEMINI_MODEL}, API version: v1`);
       
-      // Initialize the Gemini 2.0 Flash model
+      // Initialize the Gemini model and send request directly
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
       
-      console.log(`Sending request to Gemini API using ${GEMINI_MODEL}`);
-      
-      // Add timeout to prevent infinite waiting
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Gemini API request timeout')), API_TIMEOUT);
-      });
-      
-      // Generate the study plan with structured output format
-      const contentPromise = model.generateContent({
+      const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.2,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 4096, // Reduced from 8192 to improve performance
+          maxOutputTokens: 4096,
           responseMimeType: 'application/json'
         }
       });
       
-      // Race between the API call and the timeout
-      const result = await Promise.race([contentPromise, timeoutPromise]) as any;
-      
       console.log("Received response from Gemini API");
-      const response = await result.response;
+      
+      const text = result.response.text();
       let jsonResult;
       
       try {
-        // First try to get JSON directly if the model returned JSON format
-        const text = response.text();
-        console.log("Parsing JSON response");
+        // Parse the response
         jsonResult = JSON.parse(text);
-        console.log("Successfully parsed JSON response");
       } catch (error) {
-        console.error("Error parsing direct JSON response:", error);
-        
-        // Fallback: try to extract JSON from markdown code blocks
-        const textResult = response.text();
-        console.log("Attempting to extract JSON from text response");
-        try {
-          const jsonMatch = textResult.match(/```json\n([\s\S]*)\n```/) || 
-                            textResult.match(/```\n([\s\S]*)\n```/) ||
-                            [null, textResult];
-                            
-          jsonResult = JSON.parse(jsonMatch[1] || textResult);
-          console.log("Successfully extracted JSON from text response");
-        } catch (parseError) {
-          console.error("Error parsing Gemini response:", parseError);
-          console.log("Using fallback study plan due to parsing error");
-          jsonResult = createFallbackStudyPlan(syllabusFile.name);
-        }
-      }
-      
-      // Validate that the response has the required structure
-      if (!jsonResult.topics || !Array.isArray(jsonResult.topics) || jsonResult.topics.length === 0) {
-        console.log("Invalid response structure (missing topics array), using fallback");
+        console.error("Error parsing JSON response:", error);
+        // Fallback to the default study plan
         jsonResult = createFallbackStudyPlan(syllabusFile.name);
       }
       
       // Return the study plan
-      console.log("Returning successful response");
       return NextResponse.json(jsonResult);
       
-    } catch (aiError) {
-      console.error("Error calling Gemini API:", aiError);
-      console.log("Using fallback study plan due to API error");
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+      // Return a fallback plan
       const fallbackPlan = createFallbackStudyPlan(syllabusFile.name);
       return NextResponse.json(fallbackPlan);
     }
-    
   } catch (error) {
-    console.error("Error in study planner API:", error);
-    console.log("Using fallback study plan due to unexpected error");
-    // Return a fallback plan even in case of unexpected errors
+    console.error("Unexpected error:", error);
+    // Return a fallback plan for any error
     const fallbackPlan = createFallbackStudyPlan("Study Plan");
     return NextResponse.json(fallbackPlan);
   }
