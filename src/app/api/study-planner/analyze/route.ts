@@ -86,6 +86,48 @@ const createFallbackStudyPlan = (syllabusName: string) => {
   };
 };
 
+// Add this function near the top of the file, outside the POST function
+function cleanAndParseJSON(text: string): any {
+  // First, try direct parsing
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.log("Direct JSON parsing failed, attempting cleanup");
+    
+    // Try various cleaning approaches
+    try {
+      // Remove markdown code blocks
+      let cleaned = text.replace(/```json\s*|\s*```/g, '').trim();
+      
+      // Try to fix common JSON syntax errors
+      cleaned = cleaned.replace(/,\s*}/g, '}'); // Remove trailing commas in objects
+      cleaned = cleaned.replace(/,\s*\]/g, ']'); // Remove trailing commas in arrays
+      
+      // Find unterminated strings and add missing quote
+      const matches = cleaned.match(/"[^"]*$/g);
+      if (matches && matches.length > 0) {
+        cleaned += '"';
+      }
+      
+      // Make sure the JSON is complete
+      try {
+        // If it starts with { but doesn't end with }, add it
+        if (cleaned.trim().startsWith('{') && !cleaned.trim().endsWith('}')) {
+          cleaned = cleaned.trim() + '}';
+        }
+        
+        return JSON.parse(cleaned);
+      } catch (error) {
+        console.error("JSON cleanup failed:", error);
+        throw error;
+      }
+    } catch (cleanError) {
+      console.error("All JSON cleaning attempts failed:", cleanError);
+      throw cleanError;
+    }
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     console.log("Starting syllabus analysis process");
@@ -157,11 +199,22 @@ export async function POST(req: NextRequest) {
           fileContent = `
             The following content was extracted from an image of a syllabus or course material:
             
-            ${extractedContent}
+            ${extractedContent.substring(0, 1000)}${extractedContent.length > 1000 ? "..." : ""}
             
             Based on this extracted information, please create a detailed study plan with specific topics, 
             subtopics, and time allocations. Ensure all topics and subtopics are specific and concrete, 
             not placeholders or generic items.
+            
+            Your response MUST be a valid JSON object with no syntax errors.
+            
+            IMPORTANT REQUIREMENTS FOR JSON GENERATION:
+            1. Keep your response concise - limit to 5-7 topics maximum
+            2. Each topic should have 3-4 subtopics maximum
+            3. Keep all text descriptions under 100 characters
+            4. Do not use quotes or special characters that would need escaping in JSON
+            5. Make absolutely sure all JSON strings are properly terminated
+            6. Double-check that all objects and arrays are properly closed
+            7. The entire JSON structure must be valid and complete
             
             The plan should reflect the actual content visible in the image as closely as possible,
             and should provide a realistic roadmap for studying this material.
@@ -222,11 +275,22 @@ export async function POST(req: NextRequest) {
           fileContent = `
             The following content was extracted or inferred from a PDF of a syllabus or course material:
             
-            ${extractedContent}
+            ${extractedContent.substring(0, 1000)}${extractedContent.length > 1000 ? "..." : ""}
             
             Based on this extracted information, please create a detailed study plan with specific topics, 
             subtopics, and time allocations. Ensure all topics and subtopics are specific and concrete, 
             not placeholders or generic items.
+            
+            Your response MUST be a valid JSON object with no syntax errors.
+            
+            IMPORTANT REQUIREMENTS FOR JSON GENERATION:
+            1. Keep your response concise - limit to 5-7 topics maximum
+            2. Each topic should have 3-4 subtopics maximum
+            3. Keep all text descriptions under 100 characters
+            4. Do not use quotes or special characters that would need escaping in JSON
+            5. Make absolutely sure all JSON strings are properly terminated
+            6. Double-check that all objects and arrays are properly closed
+            7. The entire JSON structure must be valid and complete
             
             The plan should reflect the actual content from the PDF as closely as possible,
             and should provide a realistic roadmap for studying this material.
@@ -335,9 +399,10 @@ export async function POST(req: NextRequest) {
       console.log("Gemini response length:", text.length);
       console.log("First 200 chars of response:", text.substring(0, 200));
       
+      // Parse the response
       try {
-        // Parse the response
-        jsonResult = JSON.parse(text);
+        // Try to parse and validate the JSON
+        jsonResult = cleanAndParseJSON(text);
         console.log("Successfully parsed JSON response with topics:", jsonResult.topics?.length || 0);
         
         // Validate the response structure
@@ -348,23 +413,9 @@ export async function POST(req: NextRequest) {
         }
       } catch (error) {
         console.error("Error parsing JSON response:", error);
-        // Try to clean the response and parse again
-        try {
-          const cleanedText = text.replace(/```json\s*|\s*```/g, '').trim();
-          jsonResult = JSON.parse(cleanedText);
-          console.log("Successfully parsed cleaned JSON response");
-          
-          if (!jsonResult.topics || !Array.isArray(jsonResult.topics) || jsonResult.topics.length === 0) {
-            console.log("Invalid cleaned response structure, using fallback");
-            jsonResult = createFallbackStudyPlan(syllabusFile.name);
-            usingFallback = true;
-          }
-        } catch (cleanError) {
-          console.error("Error parsing cleaned JSON response:", cleanError);
-          // Fallback to the default study plan
-          jsonResult = createFallbackStudyPlan(syllabusFile.name);
-          usingFallback = true;
-        }
+        // Fallback to the default study plan
+        jsonResult = createFallbackStudyPlan(syllabusFile.name);
+        usingFallback = true;
       }
       
       // Return the study plan with a flag indicating if it's a fallback
@@ -373,7 +424,6 @@ export async function POST(req: NextRequest) {
         ...jsonResult,
         is_fallback: usingFallback
       });
-      
     } catch (error) {
       console.error("Error calling Gemini API:", error);
       // Return a fallback plan
