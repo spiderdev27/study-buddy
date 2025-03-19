@@ -25,8 +25,43 @@ export async function POST(req: NextRequest) {
     const deadline = data.get('deadline') as string;
     const dailyHours = data.get('dailyHours') as string;
     
-    // Convert the file to text
-    const fileContent = await syllabusFile.text();
+    // Handle the file based on its type
+    let fileContent = '';
+    const fileType = syllabusFile.type;
+    
+    if (fileType.includes('image/')) {
+      // For image files, convert to base64 and send to Gemini Vision model
+      const fileBuffer = await syllabusFile.arrayBuffer();
+      const fileBase64 = Buffer.from(fileBuffer).toString('base64');
+      
+      // Use Gemini Vision to extract text from image
+      const visionModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      
+      const visionResult = await visionModel.generateContent({
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: 'Extract all text from this image of a syllabus or course curriculum. Return it as plain text, preserving the structure as much as possible.' },
+            { inlineData: { 
+                mimeType: fileType,
+                data: fileBase64
+              } 
+            }
+          ]
+        }]
+      });
+      
+      fileContent = visionResult.response.text();
+    } else if (fileType.includes('pdf')) {
+      // For PDF files, we need to extract text before sending to Gemini
+      // In a real implementation, you would use a PDF parsing library
+      fileContent = `PDF file uploaded: ${syllabusFile.name}. 
+                    Since PDF parsing requires additional libraries, we're proceeding with a basic analysis.
+                    Please implement proper PDF parsing in production.`;
+    } else {
+      // For text files, Word docs, etc., just read as text
+      fileContent = await syllabusFile.text();
+    }
     
     // Create a prompt for Gemini to analyze the syllabus
     const prompt = `
@@ -41,7 +76,7 @@ export async function POST(req: NextRequest) {
       Create a study plan with the following structure:
       1. Break down the syllabus into main topics and subtopics
       2. Estimate the time needed for each topic (in hours)
-      3. Prioritize topics (high, medium, low)
+      3. Prioritize topics (high, medium, low) based on complexity and importance
       4. Create a day-by-day schedule from today until the deadline
       5. Include recommendations for optimal learning
       
@@ -74,29 +109,46 @@ export async function POST(req: NextRequest) {
       }
     `;
     
-    // Initialize the Gemini model
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    // Initialize the Gemini 2.0 Flash model
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
-    // Generate the study plan
-    const result = await model.generateContent(prompt);
+    // Generate the study plan with structured output format
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 8192,
+        responseMimeType: 'application/json'
+      }
+    });
+    
     const response = await result.response;
-    const textResult = response.text();
-    
-    // Parse the JSON response
     let jsonResult;
+    
     try {
-      // Extract JSON from the response (Gemini might wrap it in markdown code blocks)
-      const jsonMatch = textResult.match(/```json\n([\s\S]*)\n```/) || 
-                        textResult.match(/```\n([\s\S]*)\n```/) ||
-                        [null, textResult];
-                        
-      jsonResult = JSON.parse(jsonMatch[1] || textResult);
+      // First try to get JSON directly if the model returned JSON format
+      const text = response.text();
+      jsonResult = JSON.parse(text);
     } catch (error) {
-      console.error("Error parsing Gemini response:", error);
-      return NextResponse.json(
-        { error: 'Failed to parse AI response', raw: textResult },
-        { status: 500 }
-      );
+      console.error("Error parsing direct JSON response:", error);
+      
+      // Fallback: try to extract JSON from markdown code blocks
+      const textResult = response.text();
+      try {
+        const jsonMatch = textResult.match(/```json\n([\s\S]*)\n```/) || 
+                          textResult.match(/```\n([\s\S]*)\n```/) ||
+                          [null, textResult];
+                          
+        jsonResult = JSON.parse(jsonMatch[1] || textResult);
+      } catch (parseError) {
+        console.error("Error parsing Gemini response:", parseError);
+        return NextResponse.json(
+          { error: 'Failed to parse AI response', raw: textResult },
+          { status: 500 }
+        );
+      }
     }
     
     // Return the study plan

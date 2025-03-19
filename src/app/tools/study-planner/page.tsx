@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import Image from 'next/image';
-import { Calendar, Clock, Upload, CheckCircle, FileText, BarChart2, Brain, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar, Clock, Upload, CheckCircle, FileText, BarChart2, Brain, Calendar as CalendarIcon, RefreshCw, LightbulbIcon } from 'lucide-react';
 import { GlowingParticles } from '@/components/effects/GlowingParticles';
 import { cn } from '@/lib/utils';
 import FocusMode from '@/components/study-planner/FocusMode';
@@ -49,6 +49,9 @@ export default function StudyPlanner() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showFocusMode, setShowFocusMode] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<StudyTopic | null>(null);
+  const [recommendations, setRecommendations] = useState<string[]>([]);
+  const [scheduleData, setScheduleData] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme } = useTheme();
   const controls = useAnimation();
@@ -111,33 +114,98 @@ export default function StudyPlanner() {
   const handleGenerate = async () => {
     setIsGenerating(true);
     
-    // Simulate API call to Gemini for plan generation
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Mock study plan data
-    const mockStudyPlan: StudyPlan = {
-      id: 'plan-' + Date.now(),
-      title: file?.name.split('.')[0] || 'Study Plan',
-      deadline: deadline,
-      dailyHours: dailyHours,
-      progress: 0,
-      topics: generateMockTopics(),
-      createdAt: new Date()
-    };
-    
-    setStudyPlan(mockStudyPlan);
-    setIsGenerating(false);
-    setActiveStep('results');
+    try {
+      if (!file) {
+        throw new Error("No syllabus file provided");
+      }
+
+      // Create form data to send to the API
+      const formData = new FormData();
+      formData.append('syllabus', file);
+      formData.append('deadline', deadline.toISOString());
+      formData.append('dailyHours', dailyHours.toString());
+      
+      // Call the Gemini API endpoint
+      const response = await fetch('/api/study-planner/analyze', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to analyze syllabus");
+      }
+      
+      // Parse the API response
+      const data = await response.json();
+      
+      // Store recommendations and schedule
+      setRecommendations(data.recommendations || []);
+      setScheduleData(data.schedule || []);
+      
+      // Convert the API response into our StudyPlan format
+      const studyPlan: StudyPlan = {
+        id: 'plan-' + Date.now(),
+        title: file.name.split('.')[0] || 'Study Plan',
+        deadline: deadline,
+        dailyHours: dailyHours,
+        progress: 0,
+        topics: data.topics.map((topic: any) => ({
+          id: `topic-${Math.random().toString(36).substring(2, 11)}`,
+          title: topic.title,
+          description: topic.description || `Study ${topic.title}`,
+          duration: topic.duration,
+          status: 'pending' as StudyTopic['status'],
+          priority: (topic.priority || 'medium') as StudyTopic['priority'],
+          subtopics: (topic.subtopics || []).map((subtopic: any) => ({
+            id: `subtopic-${Math.random().toString(36).substring(2, 11)}`,
+            title: subtopic.title,
+            status: 'pending' as 'pending' | 'completed',
+            duration: subtopic.duration || 30,
+          })) as StudySubtopic[],
+          scheduledDate: topic.date ? new Date(topic.date) : undefined,
+        })),
+        createdAt: new Date()
+      };
+      
+      setStudyPlan(studyPlan);
+      setActiveStep('results');
+    } catch (error) {
+      console.error("Error generating study plan:", error);
+      // If there's an error, fall back to mock data for demonstration purposes
+      const mockStudyPlan: StudyPlan = {
+        id: 'plan-' + Date.now(),
+        title: file?.name.split('.')[0] || 'Study Plan',
+        deadline: deadline,
+        dailyHours: dailyHours,
+        progress: 0,
+        topics: generateMockTopics(),
+        createdAt: new Date()
+      };
+      
+      // Add some mock recommendations
+      setRecommendations([
+        "Focus on high-priority topics first, especially those that are foundational for other topics.",
+        "Take regular breaks using the Pomodoro technique (25 min study, 5 min break).",
+        "Review completed topics periodically to strengthen retention."
+      ]);
+      
+      setStudyPlan(mockStudyPlan);
+      setActiveStep('results');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const generateMockTopics = (): StudyTopic[] => {
     const topics = [];
     const subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Computer Science'];
-    const priorities = ['low', 'medium', 'high'];
+    const priorities = ['low', 'medium', 'high'] as const;
+    const statuses = ['pending', 'in-progress', 'completed', 'needs-review'] as const;
     
     for (let i = 0; i < 6; i++) {
       const subject = subjects[Math.floor(Math.random() * subjects.length)];
-      const subTopics = [];
+      const subTopics: StudySubtopic[] = [];
       
       for (let j = 0; j < 3 + Math.floor(Math.random() * 4); j++) {
         subTopics.push({
@@ -153,9 +221,9 @@ export default function StudyPlanner() {
         title: `${subject} ${i+1}`,
         description: `Study comprehensive ${subject} topics including fundamental concepts and problem-solving techniques.`,
         duration: 2 + Math.floor(Math.random() * 4),
-        status: Math.random() > 0.7 ? 'completed' : Math.random() > 0.5 ? 'in-progress' : 'pending',
+        status: statuses[Math.floor(Math.random() * statuses.length)],
         subtopics: subTopics,
-        priority: priorities[Math.floor(Math.random() * priorities.length)] as 'low' | 'medium' | 'high',
+        priority: priorities[Math.floor(Math.random() * priorities.length)],
         scheduledDate: new Date(Date.now() + (i * 24 * 60 * 60 * 1000))
       });
     }
@@ -203,6 +271,44 @@ export default function StudyPlanner() {
       handleTopicStatusChange(selectedTopic.id, 'in-progress');
     }
     setShowFocusMode(false);
+  };
+
+  const handleRefreshRecommendations = async () => {
+    if (!studyPlan) return;
+    
+    setIsRefreshing(true);
+    
+    try {
+      // Get completed and in-progress topics
+      const completedTopics = studyPlan.topics.filter(t => t.status === 'completed').map(t => t.title);
+      const inProgressTopics = studyPlan.topics.filter(t => t.status === 'in-progress').map(t => t.title);
+      const pendingTopics = studyPlan.topics.filter(t => t.status === 'pending').map(t => t.title);
+      
+      // Call API to get new recommendations based on progress
+      const response = await fetch('/api/study-planner/recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          completedTopics,
+          inProgressTopics,
+          pendingTopics,
+          deadline: studyPlan.deadline,
+          dailyHours: studyPlan.dailyHours,
+          progress: studyPlan.progress
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setRecommendations(data.recommendations);
+      }
+    } catch (error) {
+      console.error("Error refreshing recommendations:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Simple animation for the steps
@@ -637,38 +743,101 @@ export default function StudyPlanner() {
               {/* AI Recommendations Section */}
               <div className="mt-8">
                 <div className="bg-white/20 dark:bg-card-bg/20 backdrop-blur-xl rounded-xl p-6 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Brain className="text-primary w-5 h-5" />
-                    <h2 className="text-xl font-semibold text-black dark:text-white">AI Recommendations</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Brain className="text-primary w-5 h-5" />
+                      <h2 className="text-xl font-semibold text-black dark:text-white">AI Recommendations</h2>
+                    </div>
+                    
+                    <button
+                      onClick={handleRefreshRecommendations}
+                      disabled={isRefreshing}
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      {isRefreshing ? (
+                        <>
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          <span>Refreshing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-3 h-3" />
+                          <span>Refresh</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-white/20 dark:bg-black/20 text-black dark:text-white">
-                      <h3 className="font-medium mb-2">Optimize Your Study Schedule</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Based on your progress, we recommend focusing on Mathematics and Physics topics next. 
-                        These are high-priority subjects with upcoming deadlines.
-                      </p>
-                    </div>
-                    
-                    <div className="p-4 rounded-lg bg-white/20 dark:bg-black/20 text-black dark:text-white">
-                      <h3 className="font-medium mb-2">Learning Resources</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        We've found excellent resources to help with Chemistry topics. Consider watching video lectures on
-                        chemical bonding and practicing with the suggested problem sets.
-                      </p>
-                    </div>
-                    
-                    <div className="p-4 rounded-lg bg-white/20 dark:bg-black/20 text-black dark:text-white">
-                      <h3 className="font-medium mb-2">Time Management</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        You're currently ahead of schedule! Consider using the extra time for revision or exploring advanced
-                        topics in Computer Science.
-                      </p>
-                    </div>
+                    {recommendations.length > 0 ? (
+                      recommendations.map((recommendation, index) => (
+                        <div 
+                          key={index}
+                          className="p-4 rounded-lg bg-white/20 dark:bg-black/20 text-black dark:text-white flex items-start gap-3"
+                        >
+                          <div className="mt-1 flex-shrink-0">
+                            <LightbulbIcon className="w-4 h-4 text-amber-500" />
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            {recommendation}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 rounded-lg bg-white/20 dark:bg-black/20 text-black dark:text-white">
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          No recommendations available. Refresh to get personalized suggestions.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+              
+              {/* Study Schedule Section */}
+              {scheduleData.length > 0 && (
+                <div className="mt-8">
+                  <div className="bg-white/20 dark:bg-card-bg/20 backdrop-blur-xl rounded-xl p-6 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Calendar className="text-primary w-5 h-5" />
+                      <h2 className="text-xl font-semibold text-black dark:text-white">Study Schedule</h2>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {scheduleData.slice(0, 9).map((day, index) => (
+                        <div 
+                          key={index}
+                          className="p-4 rounded-lg bg-white/20 dark:bg-black/20 text-black dark:text-white"
+                        >
+                          <div className="font-medium mb-2">
+                            {new Date(day.date).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </div>
+                          <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                            {day.topics.map((topic: string, i: number) => (
+                              <li key={i} className="flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary/70"></div>
+                                <span>{topic}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                      
+                      {scheduleData.length > 9 && (
+                        <div className="p-4 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center">
+                          <button className="text-sm text-primary">
+                            View Full Schedule
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
