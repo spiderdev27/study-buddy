@@ -8,6 +8,19 @@ import { Calendar, Clock, Upload, CheckCircle, FileText, BarChart2, Brain, Calen
 import { GlowingParticles } from '@/components/effects/GlowingParticles';
 import { cn } from '@/lib/utils';
 import FocusMode from '@/components/study-planner/FocusMode';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from 'recharts';
 
 // Types for our study planner
 type StudyPlan = {
@@ -56,6 +69,8 @@ export default function StudyPlanner() {
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualSyllabusText, setManualSyllabusText] = useState('');
   const [showFullSchedule, setShowFullSchedule] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [studyTimeLog, setStudyTimeLog] = useState<{date: string, minutes: number}[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme } = useTheme();
   const controls = useAnimation();
@@ -301,10 +316,13 @@ export default function StudyPlanner() {
     setShowFocusMode(true);
   };
 
-  const handleFocusComplete = () => {
+  const handleFocusComplete = (studyDuration: number) => {
     if (selectedTopic && studyPlan) {
       // Mark the topic as in-progress when focus session ends
       handleTopicStatusChange(selectedTopic.id, 'in-progress');
+      
+      // Log the study time
+      logStudyTime(selectedTopic.id, studyDuration);
     }
     setShowFocusMode(false);
   };
@@ -361,6 +379,95 @@ export default function StudyPlanner() {
     const deadlineDate = new Date(studyPlan.deadline);
     const diff = deadlineDate.getTime() - today.getTime();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+
+  // Add this function to track and log study time
+  const logStudyTime = (topicId: string, minutes: number) => {
+    if (!studyPlan) return;
+    
+    // Log the study time
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Update the time log
+    setStudyTimeLog(prev => {
+      const existingEntry = prev.find(entry => entry.date === today);
+      if (existingEntry) {
+        return prev.map(entry => 
+          entry.date === today 
+            ? { ...entry, minutes: entry.minutes + minutes } 
+            : entry
+        );
+      } else {
+        return [...prev, { date: today, minutes }];
+      }
+    });
+    
+    // Also update the topic progress
+    const updatedTopics = [...studyPlan.topics];
+    const topicIndex = updatedTopics.findIndex(t => t.id === topicId);
+    
+    if (topicIndex !== -1) {
+      // Mark as in-progress if not completed
+      if (updatedTopics[topicIndex].status !== 'completed') {
+        updatedTopics[topicIndex].status = 'in-progress';
+      }
+    }
+    
+    // Update study plan
+    setStudyPlan({
+      ...studyPlan,
+      topics: updatedTopics
+    });
+  };
+
+  // Add this function to get analytics data
+  const getAnalyticsData = () => {
+    if (!studyPlan) return null;
+    
+    // Status distribution
+    const statusData = [
+      { name: 'Completed', value: studyPlan.topics.filter(t => t.status === 'completed').length },
+      { name: 'In Progress', value: studyPlan.topics.filter(t => t.status === 'in-progress').length },
+      { name: 'Needs Review', value: studyPlan.topics.filter(t => t.status === 'needs-review').length },
+      { name: 'Not Started', value: studyPlan.topics.filter(t => t.status === 'pending').length }
+    ];
+    
+    // Priority distribution
+    const priorityData = [
+      { name: 'High Priority', value: studyPlan.topics.filter(t => t.priority === 'high').length },
+      { name: 'Medium Priority', value: studyPlan.topics.filter(t => t.priority === 'medium').length },
+      { name: 'Low Priority', value: studyPlan.topics.filter(t => t.priority === 'low').length }
+    ];
+    
+    // Time spent data (converting to hours for display)
+    const timeSpentData = studyTimeLog.map(entry => ({
+      date: entry.date,
+      hours: Math.round((entry.minutes / 60) * 10) / 10
+    }));
+    
+    // Daily goal progress (based on daily hours target)
+    const dailyGoalData = studyTimeLog.map(entry => ({
+      date: entry.date,
+      actual: Math.round((entry.minutes / 60) * 10) / 10,
+      target: dailyHours
+    }));
+    
+    // Remaining workload
+    const totalHours = studyPlan.topics.reduce((acc, topic) => acc + topic.duration, 0);
+    const completedHours = studyPlan.topics
+      .filter(t => t.status === 'completed')
+      .reduce((acc, topic) => acc + topic.duration, 0);
+    const remainingHours = totalHours - completedHours;
+    
+    return {
+      statusData,
+      priorityData,
+      timeSpentData,
+      dailyGoalData,
+      totalHours,
+      completedHours,
+      remainingHours
+    };
   };
 
   return (
@@ -651,6 +758,14 @@ export default function StudyPlanner() {
                           className="w-full py-2 px-4 rounded-lg font-medium text-white bg-primary hover:bg-primary/90 transition-colors"
                         >
                           Create New Plan
+                        </button>
+                        
+                        <button
+                          onClick={() => setShowAnalytics(true)}
+                          className="w-full py-2 px-4 rounded-lg font-medium border border-primary text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <BarChart2 className="h-4 w-4" />
+                          <span>View Analytics</span>
                         </button>
                         
                         <a 
@@ -1070,6 +1185,245 @@ export default function StudyPlanner() {
             <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex justify-end">
               <button
                 onClick={() => setShowFullSchedule(false)}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Dashboard Modal */}
+      {showAnalytics && studyPlan && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-900 z-10">
+              <h3 className="text-lg font-medium text-black dark:text-white flex items-center gap-2">
+                <BarChart2 className="h-5 w-5 text-primary" />
+                <span>Study Progress Analytics</span>
+              </h3>
+              <button 
+                onClick={() => setShowAnalytics(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto p-6 flex-1">
+              {getAnalyticsData() && (
+                <div className="space-y-8">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white/20 dark:bg-gray-800/30 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Study Time</h4>
+                      <div className="mt-2 flex items-end justify-between">
+                        <div className="text-2xl font-bold text-black dark:text-white">
+                          {studyTimeLog.reduce((acc, log) => acc + log.minutes, 0) / 60 > 0
+                            ? `${(studyTimeLog.reduce((acc, log) => acc + log.minutes, 0) / 60).toFixed(1)} hrs`
+                            : 'No data yet'}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {studyTimeLog.length > 0 ? `over ${studyTimeLog.length} days` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white/20 dark:bg-gray-800/30 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Completion Rate</h4>
+                      <div className="mt-2 flex items-end justify-between">
+                        <div className="text-2xl font-bold text-black dark:text-white">
+                          {Math.round(studyPlan.progress)}%
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {getAnalyticsData()?.statusData[0].value} of {studyPlan.topics.length} topics
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white/20 dark:bg-gray-800/30 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Remaining Time</h4>
+                      <div className="mt-2 flex items-end justify-between">
+                        <div className="text-2xl font-bold text-black dark:text-white">
+                          {getAnalyticsData()?.remainingHours.toFixed(1)} hrs
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          of {getAnalyticsData()?.totalHours} total hours
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Topic Status Chart */}
+                  <div className="bg-white/20 dark:bg-gray-800/30 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                    <h4 className="text-base font-medium text-black dark:text-white mb-4">Topic Status Distribution</h4>
+                    <div className="h-80 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={getAnalyticsData()?.statusData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={true}
+                            label={({ name, percent }: { name: string, percent: number }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {getAnalyticsData()?.statusData?.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={
+                                  entry.name === 'Completed' ? '#4ade80' : 
+                                  entry.name === 'In Progress' ? '#60a5fa' : 
+                                  entry.name === 'Needs Review' ? '#fbbf24' : 
+                                  '#9ca3af'
+                                } 
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  
+                  {/* Daily Goal Progress */}
+                  {getAnalyticsData()?.dailyGoalData.length > 0 && (
+                    <div className="bg-white/20 dark:bg-gray-800/30 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                      <h4 className="text-base font-medium text-black dark:text-white mb-4">Daily Study Progress</h4>
+                      <div className="h-80 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={getAnalyticsData()?.dailyGoalData}
+                            margin={{
+                              top: 5,
+                              right: 30,
+                              left: 20,
+                              bottom: 5,
+                            }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" />
+                            <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="actual" name="Actual Hours" fill="#60a5fa" />
+                            <Bar dataKey="target" name="Target Hours" fill="#9ca3af" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Priority Distribution */}
+                  <div className="bg-white/20 dark:bg-gray-800/30 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                    <h4 className="text-base font-medium text-black dark:text-white mb-4">Topics by Priority</h4>
+                    <div className="h-80 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={getAnalyticsData()?.priorityData}
+                          layout="vertical"
+                          margin={{
+                            top: 5,
+                            right: 30,
+                            left: 20,
+                            bottom: 5,
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" />
+                          <YAxis dataKey="name" type="category" />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="value" name="Number of Topics" fill="#8884d8">
+                            {getAnalyticsData()?.priorityData?.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={
+                                  entry.name === 'High Priority' ? '#ef4444' : 
+                                  entry.name === 'Medium Priority' ? '#f59e0b' : 
+                                  '#3b82f6'
+                                } 
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  
+                  {/* Suggestions based on progress */}
+                  <div className="bg-white/20 dark:bg-gray-800/30 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                    <h4 className="text-base font-medium text-black dark:text-white mb-4">AI Suggestions Based on Progress</h4>
+                    <div className="space-y-3">
+                      {getAnalyticsData()?.statusData[1].value > 0 && (
+                        <div className="flex items-start gap-2">
+                          <div className="p-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            You have {getAnalyticsData()?.statusData[1].value} topics in progress. 
+                            Consider completing these before starting new topics.
+                          </p>
+                        </div>
+                      )}
+                      
+                      {getAnalyticsData()?.statusData[2].value > 0 && (
+                        <div className="flex items-start gap-2">
+                          <div className="p-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            You have {getAnalyticsData()?.statusData[2].value} topics marked for review. 
+                            Schedule review sessions for these topics soon.
+                          </p>
+                        </div>
+                      )}
+                      
+                      {studyPlan.progress < 30 && getDaysLeft() < 7 && (
+                        <div className="flex items-start gap-2">
+                          <div className="p-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v4a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            You're progressing slower than needed to meet your deadline. Consider 
+                            increasing your daily study hours or focusing on high-priority topics first.
+                          </p>
+                        </div>
+                      )}
+                      
+                      {getAnalyticsData()?.statusData[3].value === 0 && getAnalyticsData()?.statusData[2].value === 0 && (
+                        <div className="flex items-start gap-2">
+                          <div className="p-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            Great progress! You've started or completed all topics. Keep up the good work!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex justify-end">
+              <button
+                onClick={() => setShowAnalytics(false)}
                 className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
               >
                 Close
