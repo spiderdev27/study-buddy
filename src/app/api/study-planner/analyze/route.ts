@@ -214,18 +214,20 @@ export async function POST(req: NextRequest) {
             const extractionPrompt = `
               You are an expert at analyzing educational content. You are looking at an image of a syllabus or course material.
               
-              Your task is to extract any visible text, topics, or subject matter from this image.
+              Your task is to extract the EXACT hierarchical structure visible in this image, preserving the original organization.
               
-              Describe what you see in the image as thoroughly as possible, focusing on:
+              Extract and organize the content EXACTLY as it appears, with special focus on:
               1. The main subject or course name
-              2. Any visible topics, units, or chapters
-              3. Any dates, deadlines, or schedule information
-              4. Any other relevant educational content
+              2. The exact units/chapters as they appear in the document
+              3. The exact subtopics under each unit/chapter, maintaining the original hierarchy
+              4. Any dates, deadlines, or schedule information
               
-              If you can see text in the image, please extract and transcribe it as accurately as possible.
+              IMPORTANT: Do NOT add any subtopics or content that is not explicitly visible in the image.
+              Do NOT create your own organizational structure - only extract what you can actually see.
+              
               If you can't see specific details clearly, state so explicitly rather than making assumptions.
               
-              Format your response as a straightforward description, including any topics, chapters or sections you identify.
+              Format your response to clearly show the hierarchical structure (main topics → subtopics) exactly as visible in the image.
             `;
             
             // Initialize the Gemini multimodal model for vision capabilities
@@ -266,26 +268,21 @@ export async function POST(req: NextRequest) {
               
               ${extractedContent.substring(0, 1500)}${extractedContent.length > 1500 ? "..." : ""}
               
-              Based on this extracted information, please create a detailed study plan with specific topics, 
-              subtopics, and time allocations. Ensure all topics and subtopics are specific and concrete, 
-              not placeholders or generic items.
+              Based on this extracted information, please create a study plan that EXACTLY follows the structure provided.
               
               Your response MUST be a valid JSON object with no syntax errors.
               
-              IMPORTANT REQUIREMENTS FOR JSON GENERATION:
-              1. Include all relevant topics from the syllabus - don't limit the number
-              2. For EACH topic, provide at least 5-7 detailed and specific subtopics
-              3. Each subtopic must be specific and descriptive, not generic
-              4. Keep all text descriptions under 100 characters
-              5. Do not use quotes or special characters that would need escaping in JSON
-              6. Make absolutely sure all JSON strings are properly terminated
-              7. Double-check that all objects and arrays are properly closed
+              IMPORTANT REQUIREMENTS:
+              1. Use ONLY the topics and subtopics as they appear in the extracted content
+              2. Maintain the exact hierarchical structure of chapters/units → subtopics as seen in the syllabus
+              3. DO NOT create additional subtopics that are not in the original content
+              4. DO NOT reorganize the content into a different structure
+              5. Each chapter/unit from the syllabus should be a "topic" in the JSON
+              6. All subtopics listed under a chapter/unit should be included in the "subtopics" array for that topic
+              7. Make absolutely sure all JSON strings are properly terminated
               8. The entire JSON structure must be valid and complete
               
-              The plan should reflect the actual content visible in the image as closely as possible,
-              and should provide a realistic roadmap for studying this material.
-              
-              If you aren't certain about some content, do not make assumptions - focus on what was clearly visible in the image.
+              If certain parts of the hierarchy are unclear or not visible in the extraction, include only what is clearly visible and note any gaps.
             `;
             
           } catch (error) {
@@ -315,17 +312,20 @@ export async function POST(req: NextRequest) {
             const extractionPrompt = `
               You are an expert at analyzing educational content. You are looking at a PDF that contains syllabus or course information.
               
-              Your ONLY task is to extract any text, topics, or subject matter from this PDF: "${syllabusFile.name}".
+              Your ONLY task is to extract the EXACT hierarchical structure from this PDF: "${syllabusFile.name}".
               
-              Describe what you believe is contained in this PDF as thoroughly as possible, focusing on:
-              1. The main subject or course name (if identifiable from the filename)
-              2. Any likely topics, units, or chapters based on the PDF name
-              3. Any dates or timing information that might be inferred
-              4. Any other relevant educational content
+              Extract and organize the content EXACTLY as it appears, with special focus on:
+              1. The main subject or course name
+              2. The exact units/chapters as they appear in the document
+              3. The exact subtopics under each unit/chapter, maintaining the original hierarchy
+              4. Any dates, deadlines, or schedule information
               
-              Don't worry about creating a study plan yet - just extract and list all the information you can reasonably infer.
+              IMPORTANT: Do NOT add any subtopics or content that is not explicitly visible in the PDF.
+              Do NOT create your own organizational structure - only extract what you can actually see.
               
-              Format your response as a straightforward description, including any topics, chapters or sections you identify.
+              If you can't see specific details clearly, state so explicitly rather than making assumptions.
+              
+              Format your response to clearly show the hierarchical structure (main topics → subtopics) exactly as visible in the PDF.
             `;
             
             // Initialize the Gemini model for the extraction step
@@ -348,24 +348,21 @@ export async function POST(req: NextRequest) {
               
               ${extractedContent.substring(0, 1000)}${extractedContent.length > 1000 ? "..." : ""}
               
-              Based on this extracted information, please create a detailed study plan with specific topics, 
-              subtopics, and time allocations. Ensure all topics and subtopics are specific and concrete, 
-              not placeholders or generic items.
+              Based on this extracted information, please create a study plan that EXACTLY follows the structure provided.
               
               Your response MUST be a valid JSON object with no syntax errors.
               
-              IMPORTANT REQUIREMENTS FOR JSON GENERATION:
-              1. Include all relevant topics from the content - don't limit the number
-              2. For EACH topic, provide at least 5-7 detailed and specific subtopics
-              3. Each subtopic must be specific and descriptive, not generic
-              4. Keep all text descriptions under 100 characters
-              5. Do not use quotes or special characters that would need escaping in JSON
-              6. Make absolutely sure all JSON strings are properly terminated
-              7. Double-check that all objects and arrays are properly closed
+              IMPORTANT REQUIREMENTS:
+              1. Use ONLY the topics and subtopics as they appear in the extracted content
+              2. Maintain the exact hierarchical structure of chapters/units → subtopics as seen in the syllabus
+              3. DO NOT create additional subtopics that are not in the original content
+              4. DO NOT reorganize the content into a different structure
+              5. Each chapter/unit from the syllabus should be a "topic" in the JSON
+              6. All subtopics listed under a chapter/unit should be included in the "subtopics" array for that topic
+              7. Make absolutely sure all JSON strings are properly terminated
               8. The entire JSON structure must be valid and complete
               
-              The plan should reflect the actual content from the PDF as closely as possible,
-              and should provide a realistic roadmap for studying this material.
+              If certain parts of the hierarchy are unclear or not visible in the extraction, include only what is clearly visible and note any gaps.
             `;
             
           } catch (error) {
@@ -412,11 +409,10 @@ export async function POST(req: NextRequest) {
       IMPORTANT INSTRUCTIONS:
       - DO NOT use placeholder text like "[Course Name]" or "[Specific Topic]" - use specific, descriptive titles
       - If the syllabus doesn't specify a course name, use a descriptive title based on the content (e.g., "Introduction to Computer Science")
-      - Generate concrete, realistic topics that would actually appear in a university course
-      - Each topic should have a specific and descriptive title and explanation
-      - For all subtopics, provide specific names that clearly describe what the student will study
-      - Each topic MUST have at least 5-7 detailed subtopics that break down the main topic into learnable chunks
-      - Include ALL relevant topics from the syllabus - don't artificially limit the number
+      - Use ONLY topics and subtopics that appear in the original syllabus - DO NOT add your own
+      - Maintain the exact hierarchical structure of the syllabus (chapters/units → subtopics)
+      - DO NOT add additional subtopics that aren't present in the original syllabus content
+      - For each topic from the syllabus, include only the subtopics that are explicitly mentioned under it
       
       Format your response STRICTLY as JSON with the following structure. This is extremely important:
       {
