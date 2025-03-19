@@ -127,6 +127,8 @@ export default function StudyPlanner() {
       formData.append('deadline', deadline.toISOString());
       formData.append('dailyHours', dailyHours.toString());
       
+      console.log("Sending request to analyze syllabus:", file.name, file.type);
+      
       // Call the Gemini API endpoint
       const response = await fetch('/api/study-planner/analyze', {
         method: 'POST',
@@ -135,16 +137,27 @@ export default function StudyPlanner() {
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("API returned error:", errorData);
         throw new Error(errorData.error || "Failed to analyze syllabus");
       }
       
       // Parse the API response
       const data = await response.json();
       
+      console.log("API response received:", {
+        topicsCount: data.topics?.length || 0,
+        recommendationsCount: data.recommendations?.length || 0,
+        scheduleCount: data.schedule?.length || 0,
+        is_fallback: data.is_fallback
+      });
+      
       // Check if we're using fallback data
-      if (data.is_fallback) {
-        console.log("Using fallback data as Gemini API could not generate a proper response");
+      if (data.is_fallback === true) {
+        console.log("Using fallback data as indicated by API response");
         setUsingFallbackData(true);
+      } else {
+        console.log("Using real Gemini-generated data");
+        setUsingFallbackData(false);
       }
       
       // Store recommendations and schedule
