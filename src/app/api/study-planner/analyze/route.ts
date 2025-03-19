@@ -200,6 +200,9 @@ export async function POST(req: NextRequest) {
       Do NOT return any text outside of this JSON structure. The response must be valid JSON.
     `;
     
+    let usingFallback = false;
+    let jsonResult;
+    
     try {
       console.log("Initializing Gemini 2.0 Flash model");
       console.log(`Using model: ${GEMINI_MODEL}, API version: v1`);
@@ -222,8 +225,6 @@ export async function POST(req: NextRequest) {
       console.log("Gemini response length:", text.length);
       console.log("First 200 chars of response:", text.substring(0, 200));
       
-      let jsonResult;
-      
       try {
         // Parse the response
         jsonResult = JSON.parse(text);
@@ -233,6 +234,7 @@ export async function POST(req: NextRequest) {
         if (!jsonResult.topics || !Array.isArray(jsonResult.topics) || jsonResult.topics.length === 0) {
           console.log("Invalid response structure (missing topics array), using fallback");
           jsonResult = createFallbackStudyPlan(syllabusFile.name);
+          usingFallback = true;
         }
       } catch (error) {
         console.error("Error parsing JSON response:", error);
@@ -245,18 +247,21 @@ export async function POST(req: NextRequest) {
           if (!jsonResult.topics || !Array.isArray(jsonResult.topics) || jsonResult.topics.length === 0) {
             console.log("Invalid cleaned response structure, using fallback");
             jsonResult = createFallbackStudyPlan(syllabusFile.name);
+            usingFallback = true;
           }
         } catch (cleanError) {
           console.error("Error parsing cleaned JSON response:", cleanError);
           // Fallback to the default study plan
           jsonResult = createFallbackStudyPlan(syllabusFile.name);
+          usingFallback = true;
         }
       }
       
       // Return the study plan with a flag indicating if it's a fallback
+      console.log("Returning response, using fallback:", usingFallback);
       return NextResponse.json({
         ...jsonResult,
-        is_fallback: jsonResult === createFallbackStudyPlan(syllabusFile.name)
+        is_fallback: usingFallback
       });
       
     } catch (error) {
