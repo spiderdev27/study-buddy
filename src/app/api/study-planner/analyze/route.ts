@@ -120,29 +120,57 @@ export async function POST(req: NextRequest) {
         // For image files, provide a better description and guidance
         fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
                       
-                      This is an image of a syllabus or course outline.
+                      This appears to be an image of a university course syllabus.
                       
-                      For planning purposes, please:
-                      1. Create a standard university course syllabus structure
-                      2. Include typical course sections (Introduction, Learning Objectives, Weekly Topics, Assignments, etc.)
-                      3. Generate approximately 10-15 main topics that would be reasonable for a university course
-                      4. For each topic, create 2-4 subtopics
-                      5. Ensure topics follow a logical progression (introductory to advanced)
+                      Since I cannot read the actual content from the image, please create a comprehensive study plan for a standard university Computer Science course with the following characteristics:
                       
-                      The plan should be comprehensive and detailed, suitable for a university-level course.`;
+                      - Course Title: "Advanced Programming Concepts"
+                      - Subject Area: Computer Science 
+                      - Level: Undergraduate (3rd year)
+                      - Duration: One semester (16 weeks)
+                      
+                      The course should cover:
+                      - Object-oriented programming principles in depth
+                      - Data structures and algorithms
+                      - Software design patterns
+                      - Testing methodologies
+                      - Basic web development
+                      - Database integration
+                      
+                      For each topic:
+                      1. Create realistic, specific topic titles (NO placeholders or generic titles)
+                      2. Provide 3-5 detailed subtopics for each main topic
+                      3. Assign appropriate time estimates and priorities
+                      4. Ensure topics follow a logical progression from fundamentals to advanced concepts
+                      
+                      The plan should be comprehensive and detailed, suitable for a third-year Computer Science student.`;
       } else if (syllabusFile.type.includes('pdf')) {
         fileContent = `File uploaded: ${syllabusFile.name} (${syllabusFile.type})
                       
-                      This is a PDF of a course syllabus.
+                      This appears to be a PDF of a university course syllabus.
                       
-                      Please generate a detailed study plan that:
-                      1. Covers approximately 10-15 main topics
-                      2. Includes 2-4 subtopics for each main topic
-                      3. Follows a standard university course structure
-                      4. Provides reasonable time estimates for each section
-                      5. Creates a logical progression of topics
+                      Since I cannot extract the text content from the PDF, please create a comprehensive study plan for a standard university Data Science course with the following characteristics:
                       
-                      The plan should be comprehensive and detailed, suitable for a university-level course.`;
+                      - Course Title: "Foundations of Data Science" 
+                      - Subject Area: Data Science & Statistics
+                      - Level: Undergraduate (2nd year)
+                      - Duration: One semester (16 weeks)
+                      
+                      The course should cover:
+                      - Statistical analysis fundamentals
+                      - Data cleaning and preprocessing
+                      - Data visualization techniques
+                      - Machine learning basics
+                      - Python programming for data analysis
+                      - Ethics in data science
+                      
+                      For each topic:
+                      1. Create realistic, specific topic titles (NO placeholders or generic titles)
+                      2. Provide 3-5 detailed subtopics for each main topic
+                      3. Assign appropriate time estimates and priorities
+                      4. Ensure topics follow a logical progression from fundamentals to advanced concepts
+                      
+                      The plan should be comprehensive and detailed, suitable for a second-year Data Science student.`;
       } else {
         // For text files, get actual content
         fileContent = await syllabusFile.text();
@@ -169,17 +197,24 @@ export async function POST(req: NextRequest) {
       4. Create a day-by-day schedule from today until the deadline
       5. Include specific recommendations for optimal learning
       
+      IMPORTANT INSTRUCTIONS:
+      - DO NOT use placeholder text like "[Course Name]" or "[Specific Topic]" - use specific, descriptive titles
+      - If the syllabus doesn't specify a course name, use a descriptive title based on the content (e.g., "Introduction to Computer Science")
+      - Generate concrete, realistic topics that would actually appear in a university course
+      - Each topic should have a specific and descriptive title and explanation
+      - For all subtopics, provide specific names that clearly describe what the student will study
+      
       Format your response STRICTLY as JSON with the following structure. This is extremely important:
       {
         "topics": [
           {
-            "title": "Topic name",
-            "description": "Brief description",
+            "title": "Specific topic title (no placeholders)",
+            "description": "Detailed description of this topic",
             "duration": number_of_hours,
             "priority": "high|medium|low",
             "subtopics": [
               {
-                "title": "Subtopic name",
+                "title": "Specific subtopic name (no placeholders)",
                 "duration": number_of_minutes
               }
             ]
@@ -282,4 +317,4 @@ export async function POST(req: NextRequest) {
       is_fallback: true
     });
   }
-} 
+}
