@@ -52,6 +52,7 @@ export default function StudyPlanner() {
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [scheduleData, setScheduleData] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [usingFallbackData, setUsingFallbackData] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme } = useTheme();
   const controls = useAnimation();
@@ -113,6 +114,7 @@ export default function StudyPlanner() {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setUsingFallbackData(false);
     
     try {
       if (!file) {
@@ -138,6 +140,12 @@ export default function StudyPlanner() {
       
       // Parse the API response
       const data = await response.json();
+      
+      // Check if we're using fallback data
+      if (data.is_fallback) {
+        console.log("Using fallback data as Gemini API could not generate a proper response");
+        setUsingFallbackData(true);
+      }
       
       // Store recommendations and schedule
       setRecommendations(data.recommendations || []);
@@ -192,6 +200,7 @@ export default function StudyPlanner() {
       
       setStudyPlan(mockStudyPlan);
       setActiveStep('results');
+      setUsingFallbackData(true);
     } finally {
       setIsGenerating(false);
     }
@@ -637,6 +646,22 @@ export default function StudyPlanner() {
                 <div className="lg:col-span-2">
                   <div className="bg-white/20 dark:bg-card-bg/20 backdrop-blur-xl rounded-xl p-6 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10">
                     <h2 className="text-xl font-semibold mb-4 text-black dark:text-white">Study Topics</h2>
+                    
+                    {usingFallbackData && (
+                      <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div>
+                            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Using example study plan</p>
+                            <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
+                              We couldn't analyze your syllabus completely, so we've generated an example study plan. Try uploading a text-based syllabus for better results.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="space-y-4">
                       {studyPlan.topics.map((topic, index) => (
