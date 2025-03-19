@@ -7,6 +7,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Initialize the Google Generative AI SDK with the API key
 const genAI = new GoogleGenerativeAI('AIzaSyDHtjSriBY4qmggRkfE4I-kQQg1j5ZBRpI');
 
+// Define the Gemini model to use - consistently using Gemini 2.0 Flash for all operations
+const GEMINI_MODEL = 'gemini-1.5-flash';
+
 // Default recommendations to use as fallback
 const defaultRecommendations = [
   "Focus on completing one topic at a time rather than working on multiple topics simultaneously.",
@@ -78,11 +81,11 @@ export async function POST(req: NextRequest) {
     `;
     
     try {
-      console.log("Initializing Gemini model");
-      // Initialize the Gemini model
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      console.log("Initializing Gemini 2.0 Flash model");
+      // Initialize the Gemini 2.0 Flash model
+      const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
       
-      console.log("Sending request to Gemini API");
+      console.log(`Sending request to Gemini API using ${GEMINI_MODEL}`);
       // Generate the recommendations
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
