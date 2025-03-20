@@ -45,7 +45,7 @@ export default function Dashboard() {
     else if (hour < 18) setGreeting('Good afternoon');
     else setGreeting('Good evening');
   }, []);
-
+  
   // Fetch user's schedule
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -416,25 +416,25 @@ export default function Dashboard() {
                   </div>
                 ) : todayClasses.length > 0 ? (
                   todayClasses.map((item, index) => (
-                    <motion.div 
-                      key={item.id}
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 + 0.3 }}
-                      className={`flex gap-3 p-3 rounded-lg ${item.isUpcoming ? 'bg-primary/5 border border-primary/10' : 'bg-white/5'}`}
-                    >
-                      <div className="min-w-10 mt-1">
-                        <div className="w-2 h-2 rounded-full bg-primary mx-auto" />
-                        <div className="h-full w-0.5 bg-white/10 mx-auto mt-1" />
+                  <motion.div 
+                    key={item.id}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 + 0.3 }}
+                    className={`flex gap-3 p-3 rounded-lg ${item.isUpcoming ? 'bg-primary/5 border border-primary/10' : 'bg-white/5'}`}
+                  >
+                    <div className="min-w-10 mt-1">
+                      <div className="w-2 h-2 rounded-full bg-primary mx-auto" />
+                      <div className="h-full w-0.5 bg-white/10 mx-auto mt-1" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm">{item.title}</h4>
+                      <div className="flex justify-between text-xs text-text-secondary mt-1">
+                        <span>{item.time}</span>
+                        <span>{item.location}</span>
                       </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{item.title}</h4>
-                        <div className="flex justify-between text-xs text-text-secondary mt-1">
-                          <span>{item.time}</span>
-                          <span>{item.location}</span>
-                        </div>
-                      </div>
-                    </motion.div>
+                    </div>
+                  </motion.div>
                   ))
                 ) : (
                   <div className="py-4 text-center text-text-secondary text-sm">

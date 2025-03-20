@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { motion } from 'framer-motion';
+import { useTheme as useNextTheme } from 'next-themes';
 
 // Define our theme types and color mode
 type ThemeType = 'default' | 'dark-academia' | 'nature' | 'minimalist';
@@ -109,13 +110,31 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 // Theme provider component
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const { resolvedTheme: nextResolvedTheme, setTheme: setNextTheme } = useNextTheme();
   const [theme, setTheme] = useState<ThemeType>('default');
   const [colorMode, setColorMode] = useState<ColorMode>('light');
   const [colors, setColors] = useState(lightThemeColors.default);
 
   // Toggle between light and dark mode
   const toggleColorMode = () => {
-    setColorMode(prev => prev === 'dark' ? 'light' : 'dark');
+    const newMode = colorMode === 'dark' ? 'light' : 'dark';
+    setColorMode(newMode);
+    // Sync with next-themes
+    setNextTheme(newMode);
+  };
+
+  // Sync with next-themes
+  useEffect(() => {
+    if (nextResolvedTheme === 'dark' || nextResolvedTheme === 'light') {
+      setColorMode(nextResolvedTheme);
+    }
+  }, [nextResolvedTheme]);
+
+  // Custom theme setter with next-themes sync
+  const setThemeWithSync = (newTheme: ThemeType) => {
+    setTheme(newTheme);
+    // Store in local storage
+    localStorage.setItem('studyBuddy-theme', newTheme);
   };
 
   // Update colors when theme or color mode changes
@@ -175,7 +194,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }, 50);
     
     // Store the theme and color mode preference
-    localStorage.setItem('studyBuddy-theme', theme);
     localStorage.setItem('studyBuddy-colorMode', colorMode);
   }, [theme, colorMode]);
   
@@ -194,7 +212,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, colorMode, setColorMode, colors, toggleColorMode }}>
+    <ThemeContext.Provider value={{ 
+      theme, 
+      setTheme: setThemeWithSync, 
+      colorMode, 
+      setColorMode, 
+      colors, 
+      toggleColorMode 
+    }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -285,63 +285,78 @@ export default function FlashcardsPage() {
           </div>
 
         {/* Deck Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mt-8">
           <AnimatePresence>
-            {decks.map((deck) => (
+            {decks.map((deck, i) => (
               <motion.div
                 key={deck.id}
-                variants={deckVariants}
-                initial="hidden"
-                animate="visible"
-                whileHover="hover"
-                className="group relative bg-card-bg backdrop-blur-lg rounded-xl p-6 cursor-pointer border border-white/10"
+                initial={deckVariants.hidden}
+                animate={deckVariants.visible}
+                exit={deckVariants.exit}
+                custom={i}
+                whileHover={{ y: -5, scale: 1.02 }}
+                className="min-h-[220px] h-full flex flex-col bg-card-bg backdrop-blur-md rounded-xl border border-white/10 shadow-lg overflow-hidden"
                 onClick={() => setSelectedDeck(deck)}
               >
-                <h3 className="text-xl font-semibold mb-2">{deck.name}</h3>
-                <div className="flex justify-between text-sm text-text-secondary">
-                  <span>{deck.flashcards.length} cards</span>
-                  <span>
-                    {deck.lastStudied
-                      ? `Last studied ${new Date(deck.lastStudied).toLocaleDateString()}`
-                      : 'Not studied yet'}
+                <div className="p-5 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-lg font-medium truncate mr-2">{deck.name}</h3>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteDeck(deck.id);
+                      }}
+                      className="text-text-secondary hover:text-red-500 transition-colors p-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                          </div>
+                  <div className="text-sm text-text-secondary mb-3 flex items-center">
+                    <span>{deck.flashcards.length} cards</span>
+                    {deck.lastStudied && (
+                      <span className="truncate ml-2">
+                        • Last studied {new Date(deck.lastStudied).toLocaleDateString()}
                           </span>
-                        </div>
-                
-                {/* Preview of first card */}
-                {deck.flashcards[0] && (
-                  <div className="mt-4 p-4 bg-card-bg/50 rounded-lg border border-white/5">
-                    <p className="text-sm text-text-secondary truncate">
-                      {deck.flashcards[0].front}
-                    </p>
+                    )}
                   </div>
-                )}
-
-                {/* Delete button */}
-                <motion.button
-                  className="absolute top-2 right-2 p-2 text-text-secondary hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteDeck(deck.id);
-                  }}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </motion.button>
+                  <div className="mt-auto">
+                    {deck.flashcards.length > 0 && (
+                      <div className="flex-1 flex items-start mt-2">
+                        <div className="text-sm relative rounded p-2 bg-black/20 w-full">
+                          <p className="line-clamp-3 overflow-ellipsis break-words text-white/80">
+                            {deck.flashcards[0].front}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </motion.div>
             ))}
+
+            {/* Create New Deck Card */}
+            <motion.div
+              key="create-new"
+              initial={deckVariants.hidden}
+              animate={deckVariants.visible}
+              exit={deckVariants.exit}
+              custom={decks.length}
+              whileHover={{ y: -5, scale: 1.02 }}
+              className="min-h-[220px] h-full flex flex-col items-center justify-center bg-card-bg/50 backdrop-blur-md rounded-xl border border-white/10 border-dashed shadow-lg p-5 cursor-pointer"
+              onClick={() => setShowCreateDeck(true)}
+            >
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-center">Create New Deck</h3>
+              <p className="text-sm text-text-secondary text-center mt-2">
+                Add a new deck of flashcards to study
+              </p>
+            </motion.div>
           </AnimatePresence>
         </div>
       </main>
