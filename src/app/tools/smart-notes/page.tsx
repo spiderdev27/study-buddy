@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { FolderNavigation } from '@/components/smart-notes/FolderNavigation';
 import { parseInternalLinks } from '@/components/smart-notes/BacklinksPanel';
+import { Header } from '@/components/navigation/Header';
+import { NavBar } from '@/components/navigation/NavBar';
 
 // Icons
 import { 
@@ -452,7 +454,10 @@ export default function SmartNotesPage() {
         ? "from-gray-900 to-gray-800" 
         : "from-gray-50 to-gray-100"
     )}>
-      {/* Header */}
+      {/* Common Header */}
+      <Header />
+      
+      {/* Smart Notes Header */}
       <header className={cn(
         "py-4 px-6 flex items-center justify-between border-b sticky top-0 z-20",
         isDark ? "bg-gray-900/90 border-gray-700" : "bg-white/90 border-gray-200",
@@ -854,6 +859,9 @@ export default function SmartNotesPage() {
           </div>
         )}
       </AnimatePresence>
+      
+      {/* Common NavBar */}
+      <NavBar />
     </div>
   );
 }
