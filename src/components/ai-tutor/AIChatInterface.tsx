@@ -34,12 +34,30 @@ export function AIChatInterface({ subject, topic, preferences }: AIChatInterface
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   
   // State for messages
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (shouldAutoScroll && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, shouldAutoScroll]);
+  
+  // Handle scroll events
+  const handleScroll = () => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const isAtBottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 50;
+      setShouldAutoScroll(isAtBottom);
+    }
+  };
   
   // Add welcome message on first load or when subject/topic changes
   useEffect(() => {
@@ -56,11 +74,6 @@ export function AIChatInterface({ subject, topic, preferences }: AIChatInterface
       }]);
     }
   }, [subject, topic]);
-  
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
   
   // Handle sending a message
   const handleSendMessage = async () => {
@@ -198,12 +211,16 @@ export function AIChatInterface({ subject, topic, preferences }: AIChatInterface
   };
   
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full pb-20">
       {/* Message display area */}
-      <div className={cn(
-        "flex-1 overflow-y-auto p-4 space-y-4 rounded-t-xl border",
-        isDark ? "bg-gray-800/30 border-gray-700" : "bg-gray-50 border-gray-200"
-      )}>
+      <div 
+        ref={chatContainerRef}
+        onScroll={handleScroll}
+        className={cn(
+          "flex-1 overflow-y-auto p-4 space-y-4 rounded-t-xl border scroll-smooth",
+          isDark ? "bg-gray-800/30 border-gray-700" : "bg-gray-50 border-gray-200"
+        )}
+      >
         <AnimatePresence>
           {messages.map((message) => (
             <motion.div
@@ -410,59 +427,50 @@ export function AIChatInterface({ subject, topic, preferences }: AIChatInterface
       
       {/* Input area */}
       <div className={cn(
-        "p-4 border rounded-b-xl",
-        isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+        "p-4 border-t",
+        isDark ? "bg-gray-800/30 border-gray-700" : "bg-white border-gray-200"
       )}>
-        <div className={cn(
-          "flex items-center gap-2 rounded-xl border p-2",
-          isDark ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-gray-300"
-        )}>
+        <div className="flex items-center gap-2">
           <input
             type="text"
             value={inputValue}
             onChange={handleInputChange}
-            onKeyDown={handleKeyPress}
-            placeholder="Type your question or message..."
+            onKeyPress={handleKeyPress}
+            placeholder="Type your message..."
             className={cn(
-              "flex-1 bg-transparent border-0 focus:ring-0 outline-none text-sm px-2 py-1",
-              isDark ? "text-white placeholder-gray-400" : "text-gray-800 placeholder-gray-500"
+              "flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/50",
+              isDark 
+                ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400" 
+                : "bg-white border-gray-200 text-gray-900 placeholder-gray-500"
             )}
             disabled={isLoading}
           />
-          
           <button
             onClick={toggleRecording}
             className={cn(
               "p-2 rounded-lg transition-colors",
               isRecording
-                ? isDark ? "bg-red-500/20 text-red-400" : "bg-red-100 text-red-500"
-                : isDark ? "text-gray-300 hover:bg-gray-600" : "text-gray-500 hover:bg-gray-200"
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : isDark
+                  ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             )}
             disabled={isLoading}
           >
             {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
           </button>
-          
           <button
             onClick={handleSendMessage}
+            disabled={isLoading || !inputValue.trim()}
             className={cn(
               "p-2 rounded-lg transition-colors",
-              isDark
-                ? "bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-600/50"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-400"
+              isLoading || !inputValue.trim()
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-primary text-white hover:bg-primary/90"
             )}
-            disabled={inputValue.trim() === '' || isLoading}
           >
-            <Send className="h-5 w-5" />
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           </button>
-        </div>
-        
-        {/* Character limit indicator */}
-        <div className={cn(
-          "text-xs mt-1 text-right",
-          isDark ? "text-gray-500" : "text-gray-400"
-        )}>
-          {inputValue.length}/1000 characters
         </div>
       </div>
     </div>
