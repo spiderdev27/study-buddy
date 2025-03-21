@@ -66,6 +66,15 @@ function ToolCard({
             <line x1="16" y1="16" x2="9" y2="16" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         );
+      case 'AIIcon':
+        return (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2a8 8 0 0 1 8 8v1a4 4 0 0 1 0 8v1a8 8 0 0 1-16 0v-1a4 4 0 0 1 0-8v-1a8 8 0 0 1 8-8z" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9.5 15a6.5 6.5 0 0 0 5 0" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M10 11h.01" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M14 11h.01" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        );
       default:
         return (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" xmlns="http://www.w3.org/2000/svg">
